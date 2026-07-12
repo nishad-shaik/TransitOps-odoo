@@ -256,6 +256,9 @@ const handleLogin = async () => {
   setTimeout(() => {
     loading.value = false;
 
+    const devEmail = import.meta.env.VITE_DEV_EMAIL || 'dev@transitops.dev';
+    const devPass = import.meta.env.VITE_DEV_PASSWORD || 'password123';
+
     // Default seeded credentials
     const defaultAccounts = {
       'fleetmanager@transitops.dev': { password: 'password123', role: 'Fleet Manager' },
@@ -263,7 +266,7 @@ const handleLogin = async () => {
       'safety@transitops.dev': { password: 'password123', role: 'Safety Officer' },
       'finance@transitops.dev': { password: 'password123', role: 'Financial Analyst' },
       'admin@transitops.dev': { password: 'password123', role: 'Fleet Manager' },
-      'dev@transitops.dev': { password: 'password123', role: 'Developer' }
+      [devEmail]: { password: devPass, role: 'Developer' }
     };
 
     // Retrieve custom registered accounts
@@ -356,7 +359,8 @@ const handleRegister = async () => {
     }
 
     // Check duplicate
-    const isSeedEmail = ['fleetmanager@transitops.dev', 'driver@transitops.dev', 'safety@transitops.dev', 'finance@transitops.dev', 'admin@transitops.dev', 'dev@transitops.dev'].includes(cleanEmail);
+    const devEmail = import.meta.env.VITE_DEV_EMAIL || 'dev@transitops.dev';
+    const isSeedEmail = ['fleetmanager@transitops.dev', 'driver@transitops.dev', 'safety@transitops.dev', 'finance@transitops.dev', 'admin@transitops.dev', devEmail].includes(cleanEmail);
     const isRegisteredEmail = registeredAccounts.some(acc => acc.email === cleanEmail);
 
     if (isSeedEmail || isRegisteredEmail) {
