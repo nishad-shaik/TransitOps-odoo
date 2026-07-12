@@ -219,10 +219,10 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { AlertTriangle, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
-
+import { useApiResource } from '../composables/useApiResource';
 
 const { showToast } = useToast();
 
@@ -233,13 +233,12 @@ const showAddModal = ref(false);
 const isSubmitting = ref(false);
 const expandedDriverLicenses = ref([]);
 
-const drivers = ref([
-  { id: 1, name: 'Alex Johnson', license_number: 'DL-55291', license_category: 'Class B', license_expiry_date: '2027-08-14', contact_number: '555-0144', tripCompletionRate: 98, safety_score: 92, status: 'Available' },
-  { id: 2, name: 'Sarah Connor', license_number: 'DL-88210', license_category: 'Class A', license_expiry_date: '2028-11-20', contact_number: '555-0182', tripCompletionRate: 100, safety_score: 98, status: 'On Trip' },
-  { id: 3, name: 'Bruce Wayne', license_number: 'DL-00707', license_category: 'Class C', license_expiry_date: '2026-02-15', contact_number: '555-0199', tripCompletionRate: 94, safety_score: 89, status: 'Available' },
-  { id: 4, name: 'Jack Torrance', license_number: 'DL-66611', license_category: 'Class B', license_expiry_date: '2024-05-10', contact_number: '555-0133', tripCompletionRate: 80, safety_score: 45, status: 'Suspended' },
-  { id: 5, name: 'Peter Parker', license_number: 'DL-12290', license_category: 'Class C', license_expiry_date: '2028-09-05', contact_number: '555-0121', tripCompletionRate: 99, safety_score: 95, status: 'Off Duty' }
-]);
+const { data: apiDrivers, fetch: fetchDrivers, create: createDriver } = useApiResource('/drivers');
+const drivers = computed(() => apiDrivers.value || []);
+
+onMounted(() => {
+  fetchDrivers();
+});
 
 const newDriver = reactive({
   name: '',
@@ -251,6 +250,7 @@ const newDriver = reactive({
   safety_score: 90,
   status: 'Available'
 });
+
 
 const isExpired = (dateStr) => {
   const expiry = new Date(dateStr);
@@ -326,23 +326,18 @@ const saveDriver = async () => {
   }
 
   isSubmitting.value = true;
-
-  setTimeout(() => {
-    drivers.value.push({
-      id: drivers.value.length + 1,
+  try {
+    await createDriver({
       name: String(newDriver.name).trim(),
       license_number: licenseNoCopy,
       license_category: newDriver.license_category,
       license_expiry_date: newDriver.license_expiry_date,
       contact_number: String(newDriver.contact_number).trim(),
-      tripCompletionRate: 100,
-      safety_score: Number(newDriver.safety_score),
-      status: 'Available'
+      safety_score: Number(newDriver.safety_score)
     });
 
     showToast(`Driver ${newDriver.name} added successfully!`, 'success');
     showAddModal.value = false;
-    isSubmitting.value = false;
 
     // Reset Form
     newDriver.name = '';
@@ -350,7 +345,11 @@ const saveDriver = async () => {
     newDriver.license_expiry_date = '';
     newDriver.contact_number = '';
     newDriver.safety_score = 90;
-  }, 800);
+  } catch (err) {
+    showToast(err.message || 'Failed to add driver.', 'error');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>
 

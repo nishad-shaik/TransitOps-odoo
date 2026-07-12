@@ -216,8 +216,9 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { useToast } from '../composables/useToast';
+import { useApiResource } from '../composables/useApiResource';
 
 const { showToast } = useToast();
 
@@ -227,17 +228,22 @@ const isSubmitting = ref(false);
 const expandedFuelIds = ref([]);
 const expandedExpIds = ref([]);
 
-const fuelLogs = ref([
-  { id: 1, vehicle_id: 'VAN-05', date: '2026-07-11', liters: 45, amount: 90, type: 'Fuel' },
-  { id: 2, vehicle_id: 'TRK-02', date: '2026-07-10', liters: 210, amount: 420, type: 'Fuel' },
-  { id: 3, vehicle_id: 'SDN-01', date: '2026-07-09', liters: 32, amount: 64, type: 'Fuel' }
-]);
+const { data: apiVehicles, fetch: fetchVehicles } = useApiResource('/vehicles');
+const { data: apiFuelLogs, fetch: fetchFuel, create: createFuel } = useApiResource('/operations/fuel-logs');
+
+const vehicles = computed(() => apiVehicles.value || []);
+const fuelLogs = computed(() => apiFuelLogs.value || []);
 
 const expenses = ref([
   { id: 1, vehicle_id: 'VAN-05', amount: 15, date: '2026-07-11', type: 'Toll' },
   { id: 2, vehicle_id: 'TRK-02', amount: 85, date: '2026-07-10', type: 'Toll' },
   { id: 3, vehicle_id: 'VAN-02', amount: 450, date: '2026-07-10', type: 'Maintenance' }
 ]);
+
+onMounted(() => {
+  fetchVehicles();
+  fetchFuel();
+});
 
 const simulatedMaintenanceCost = 600;
 
@@ -294,25 +300,26 @@ const saveFuelLog = async () => {
   }
 
   isSubmitting.value = true;
-
-  setTimeout(() => {
-    fuelLogs.value.unshift({
-      id: fuelLogs.value.length + 1,
+  try {
+    await createFuel({
       vehicle_id: vehicleId,
       liters,
       amount,
-      date: newFuel.date,
-      type: 'Fuel'
+      date: newFuel.date
     });
 
     showToast(`Fuel log for ${vehicleId} posted successfully!`, 'success');
     showFuelModal.value = false;
-    isSubmitting.value = false;
+    fetchFuel();
 
     newFuel.vehicle_id = '';
     newFuel.liters = 0;
     newFuel.amount = 0;
-  }, 600);
+  } catch (err) {
+    showToast(err.message || 'Failed to save fuel log.', 'error');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const saveExpense = async () => {

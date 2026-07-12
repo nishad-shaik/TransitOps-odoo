@@ -183,7 +183,9 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Mail, Key, Lock, Shield, AlertTriangle } from '@lucide/vue';
+import { client } from '../api/client';
 import { useToast } from '../composables/useToast';
+
 
 
 const router = useRouter();
@@ -255,75 +257,46 @@ const handleLogin = async () => {
     return;
   }
 
-  setTimeout(() => {
-    loading.value = false;
+  try {
+    const data = await client.post('/auth/login', { email: cleanEmail, password: cleanPassword });
+    
+    // Clear failed login attempts counter
+    localStorage.removeItem(attemptsKey);
+    localStorage.removeItem(lockoutKey);
 
-    const devEmail = import.meta.env.VITE_DEV_EMAIL || 'dev@transitops.dev';
-    const devPass = import.meta.env.VITE_DEV_PASSWORD || 'password123';
-
-    // Default seeded credentials
-    const defaultAccounts = {
-      'fleetmanager@transitops.dev': { password: 'password123', role: 'Fleet Manager' },
-      'driver@transitops.dev': { password: 'password123', role: 'Driver' },
-      'safety@transitops.dev': { password: 'password123', role: 'Safety Officer' },
-      'finance@transitops.dev': { password: 'password123', role: 'Financial Analyst' },
-      'admin@transitops.dev': { password: 'password123', role: 'Fleet Manager' },
-      [devEmail]: { password: devPass, role: 'Developer' }
-    };
-
-    // Retrieve custom registered accounts
-    let registeredAccounts = [];
-    try {
-      const stored = localStorage.getItem('transitops_accounts');
-      if (stored) registeredAccounts = JSON.parse(stored);
-    } catch (e) {
-      console.error('Failed to parse registered accounts', e);
-    }
-
-    // Find account
-    let matchedAccount = defaultAccounts[cleanEmail];
-    if (!matchedAccount) {
-      matchedAccount = registeredAccounts.find(acc => acc.email === cleanEmail);
-    }
-
-    // Match validation
-    if (matchedAccount && matchedAccount.password === cleanPassword) {
-      // Clear failed login attempts counter
-      localStorage.removeItem(attemptsKey);
-      localStorage.removeItem(lockoutKey);
-
-      // Remember me logic
-      if (rememberMe.value) {
-        localStorage.setItem('transitops_remembered_email', cleanEmail);
-      } else {
-        localStorage.removeItem('transitops_remembered_email');
-      }
-
-      // Save session
-      localStorage.setItem('transitops_token', 'mock-jwt-token-' + Math.random().toString(36).substr(2));
-      localStorage.setItem('transitops_user', JSON.stringify({
-        email: cleanEmail,
-        role: matchedAccount.role
-      }));
-
-      showToast('Logged in successfully!', 'success');
-      router.push('/dashboard');
+    // Remember me logic
+    if (rememberMe.value) {
+      localStorage.setItem('transitops_remembered_email', cleanEmail);
     } else {
-      // Increment failed login count
-      const attempts = (parseInt(localStorage.getItem(attemptsKey)) || 0) + 1;
-      localStorage.setItem(attemptsKey, attempts.toString());
-
-      if (attempts >= 5) {
-        const lockoutExpiration = Date.now() + 30000; // 30 seconds block
-        localStorage.setItem(lockoutKey, lockoutExpiration.toString());
-        errorMessage.value = 'Invalid credentials. Account locked after 5 failed attempts.';
-        showToast('Login blocked: account locked for 30 seconds.', 'error');
-      } else {
-        const remainingAttempts = 5 - attempts;
-        errorMessage.value = `Invalid credentials. ${remainingAttempts} attempts remaining.`;
-      }
+      localStorage.removeItem('transitops_remembered_email');
     }
-  }, 800);
+
+    // Save session
+    localStorage.setItem('transitops_token', data.token);
+    localStorage.setItem('transitops_user', JSON.stringify({
+      email: data.user.email,
+      role: data.user.role
+    }));
+
+    showToast('Logged in successfully!', 'success');
+    router.push('/dashboard');
+  } catch (err) {
+    // Increment failed login count
+    const attempts = (parseInt(localStorage.getItem(attemptsKey)) || 0) + 1;
+    localStorage.setItem(attemptsKey, attempts.toString());
+
+    if (attempts >= 5) {
+      const lockoutExpiration = Date.now() + 30000; // 30 seconds block
+      localStorage.setItem(lockoutKey, lockoutExpiration.toString());
+      errorMessage.value = 'Invalid credentials. Account locked after 5 failed attempts.';
+      showToast('Login blocked: account locked for 30 seconds.', 'error');
+    } else {
+      const remainingAttempts = 5 - attempts;
+      errorMessage.value = `${err.message || 'Invalid credentials'}. ${remainingAttempts} attempts remaining.`;
+    }
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleRegister = async () => {
@@ -348,36 +321,8 @@ const handleRegister = async () => {
     return;
   }
 
-  setTimeout(() => {
-    loading.value = false;
-
-    // Load registered list
-    let registeredAccounts = [];
-    try {
-      const stored = localStorage.getItem('transitops_accounts');
-      if (stored) registeredAccounts = JSON.parse(stored);
-    } catch (e) {
-      registeredAccounts = [];
-    }
-
-    // Check duplicate
-    const devEmail = import.meta.env.VITE_DEV_EMAIL || 'dev@transitops.dev';
-    const isSeedEmail = ['fleetmanager@transitops.dev', 'driver@transitops.dev', 'safety@transitops.dev', 'finance@transitops.dev', 'admin@transitops.dev', devEmail].includes(cleanEmail);
-    const isRegisteredEmail = registeredAccounts.some(acc => acc.email === cleanEmail);
-
-    if (isSeedEmail || isRegisteredEmail) {
-      regErrorMessage.value = 'Account email already exists.';
-      return;
-    }
-
-    // Register user
-    registeredAccounts.push({
-      email: cleanEmail,
-      password: cleanPassword,
-      role: regRole.value
-    });
-
-    localStorage.setItem('transitops_accounts', JSON.stringify(registeredAccounts));
+  try {
+    await client.post('/auth/register', { email: cleanEmail, password: cleanPassword, role: regRole.value });
     showToast('Registration successful! Please log in.', 'success');
 
     // Switch tab to signin
@@ -389,7 +334,11 @@ const handleRegister = async () => {
     regEmail.value = '';
     regPassword.value = '';
     regConfirmPassword.value = '';
-  }, 800);
+  } catch (err) {
+    regErrorMessage.value = err.message || 'Registration failed.';
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleForgotPassword = () => {

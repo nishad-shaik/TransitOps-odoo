@@ -186,10 +186,10 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { Info, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
-
+import { useApiResource } from '../composables/useApiResource';
 
 const { showToast } = useToast();
 
@@ -200,13 +200,12 @@ const showAddModal = ref(false);
 const isSubmitting = ref(false);
 const expandedRegs = ref([]);
 
-const vehicles = ref([
-  { id: 1, registration_number: 'VAN-05', vehicle_name: 'Ford Transit 350', type: 'Van', max_load_capacity: 500, odometer: 12450, acquisition_cost: 35000, status: 'Available' },
-  { id: 2, registration_number: 'TRK-02', vehicle_name: 'Volvo FH16 Heavy', type: 'Truck', max_load_capacity: 12000, odometer: 87400, acquisition_cost: 145000, status: 'On Trip' },
-  { id: 3, registration_number: 'SDN-01', vehicle_name: 'Toyota Camry hybrid', type: 'Sedan', max_load_capacity: 350, odometer: 32100, acquisition_cost: 28000, status: 'Available' },
-  { id: 4, registration_number: 'VAN-02', vehicle_name: 'Mercedes Sprinter Cargo', type: 'Van', max_load_capacity: 800, odometer: 45200, acquisition_cost: 48000, status: 'In Shop' },
-  { id: 5, registration_number: 'TRK-01', vehicle_name: 'Scania R500 Flatbed', type: 'Truck', max_load_capacity: 8000, odometer: 112000, acquisition_cost: 120000, status: 'Retired' }
-]);
+const { data: apiVehicles, fetch: fetchVehicles, create: createVehicle } = useApiResource('/vehicles');
+const vehicles = computed(() => apiVehicles.value || []);
+
+onMounted(() => {
+  fetchVehicles();
+});
 
 const newVehicle = reactive({
   registration_number: '',
@@ -217,6 +216,7 @@ const newVehicle = reactive({
   acquisition_cost: 20000,
   status: 'Available'
 });
+
 
 const toggleAccordion = (regNo) => {
   if (expandedRegs.value.includes(regNo)) {
@@ -246,7 +246,6 @@ const statusBadgeClass = (status) => {
 const saveVehicle = async () => {
   if (isSubmitting.value) return;
   
-  // Clone state copies for tamper-resistant validations
   const regNoCopy = String(newVehicle.registration_number).trim();
   const exists = vehicles.value.some(v => v.registration_number.toLowerCase() === regNoCopy.toLowerCase());
   
@@ -256,31 +255,30 @@ const saveVehicle = async () => {
   }
 
   isSubmitting.value = true;
-  
-  // Prevent duplicate submissions and trigger success toast
-  setTimeout(() => {
-    vehicles.value.push({
-      id: vehicles.value.length + 1,
+  try {
+    await createVehicle({
       registration_number: regNoCopy,
       vehicle_name: String(newVehicle.vehicle_name).trim(),
       type: newVehicle.type,
       max_load_capacity: Number(newVehicle.max_load_capacity),
       odometer: Number(newVehicle.odometer),
-      acquisition_cost: Number(newVehicle.acquisition_cost),
-      status: 'Available'
+      acquisition_cost: Number(newVehicle.acquisition_cost)
     });
     
     showToast(`Vehicle ${regNoCopy} added successfully!`, 'success');
     showAddModal.value = false;
-    isSubmitting.value = false;
-
+    
     // Reset Form
     newVehicle.registration_number = '';
     newVehicle.vehicle_name = '';
     newVehicle.max_load_capacity = 500;
     newVehicle.odometer = 0;
     newVehicle.acquisition_cost = 20000;
-  }, 800);
+  } catch (err) {
+    showToast(err.message || 'Failed to add vehicle.', 'error');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const editVehicle = (vehicle) => {

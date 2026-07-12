@@ -286,10 +286,10 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import { AlertTriangle } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
-
+import { useApiResource } from '../composables/useApiResource';
 
 const { showToast } = useToast();
 
@@ -301,28 +301,19 @@ const validationError = ref('');
 const isSubmitting = ref(false);
 const expandedTrips = ref([]);
 
-// Available Vehicles Pool
-const availableVehicles = ref([
-  { id: 1, registration_number: 'VAN-05', vehicle_name: 'Ford Transit 350', max_load_capacity: 500, status: 'Available' },
-  { id: 3, registration_number: 'SDN-01', vehicle_name: 'Toyota Camry hybrid', max_load_capacity: 350, status: 'Available' },
-  { id: 2, registration_number: 'TRK-02', vehicle_name: 'Volvo FH16 Heavy', max_load_capacity: 2500, status: 'In Shop' },
-  { id: 5, registration_number: 'TRK-04', vehicle_name: 'Scania R500 Flatbed', max_load_capacity: 8000, status: 'Retired' },
-  { id: 6, registration_number: 'VAN-01', vehicle_name: 'Ram ProMaster', max_load_capacity: 600, status: 'On Trip' }
-]);
+const { data: apiVehicles, fetch: fetchVehicles } = useApiResource('/vehicles');
+const { data: apiDrivers, fetch: fetchDrivers } = useApiResource('/drivers');
+const { data: apiTrips, fetch: fetchTrips, create: createTrip } = useApiResource('/trips');
 
-// Available Drivers Pool
-const availableDrivers = ref([
-  { id: 1, name: 'Alex Johnson', license_number: 'DL-55291', safety_score: 92, status: 'Active', license_expiry_date: '2026-12-15' },
-  { id: 5, name: 'Peter Parker', license_number: 'DL-12290', safety_score: 95, status: 'Active', license_expiry_date: '2027-04-10' },
-  { id: 3, name: 'Bruce Wayne', license_number: 'DL-00707', safety_score: 88, status: 'Suspended', license_expiry_date: '2026-11-20' },
-  { id: 4, name: 'Jack Torrance', license_number: 'DL-66611', safety_score: 45, status: 'Active', license_expiry_date: '2026-01-15' }
-]);
+const availableVehicles = computed(() => (apiVehicles.value || []).filter(v => v.status === 'Available'));
+const availableDrivers = computed(() => (apiDrivers.value || []).filter(d => d.status === 'Available'));
+const trips = computed(() => apiTrips.value || []);
 
-const trips = ref([
-  { id: 1045, source: 'Depot North', destination: 'Warehouse South', vehicle_id: 'VAN-05', driver_id: 'Alex Johnson', cargo_weight: 450, planned_distance: 85, status: 'Dispatched', eta: '1h 15m' },
-  { id: 1044, source: 'Depot East', destination: 'Distribution Hub', vehicle_id: 'TRK-02', driver_id: 'Sarah Connor', cargo_weight: 2200, planned_distance: 310, status: 'Completed', eta: 'Arrived' },
-  { id: 1042, source: 'Depot West', destination: 'Airport Cargo Terminal', vehicle_id: null, driver_id: null, cargo_weight: 800, planned_distance: 45, status: 'Draft' }
-]);
+onMounted(() => {
+  fetchVehicles();
+  fetchDrivers();
+  fetchTrips();
+});
 
 const newTrip = reactive({
   source: '',
@@ -330,6 +321,7 @@ const newTrip = reactive({
   cargo_weight: 0,
   planned_distance: 0
 });
+
 
 const toggleTripAccordion = (id) => {
   if (expandedTrips.value.includes(id)) {
@@ -421,27 +413,22 @@ const dispatchTrip = async () => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
 
-  setTimeout(() => {
-    const vehicle = availableVehicles.value[selectedVehicleIndex.value];
-    const driver = availableDrivers.value[selectedDriverIndex.value];
+  const vehicle = availableVehicles.value[selectedVehicleIndex.value];
+  const driver = availableDrivers.value[selectedDriverIndex.value];
 
-    const dispatchedRecord = {
-      id: trips.value.length + 1041,
+  try {
+    await createTrip({
       source: String(newTrip.source).trim(),
       destination: String(newTrip.destination).trim(),
       vehicle_id: vehicle.registration_number,
       driver_id: driver.name,
       cargo_weight: Number(newTrip.cargo_weight),
-      planned_distance: Number(newTrip.planned_distance),
-      status: 'Dispatched',
-      eta: '2h 30m'
-    };
-
-    trips.value.push(dispatchedRecord);
+      planned_distance: Number(newTrip.planned_distance)
+    });
     
-    // Remove vehicle and driver from available lists
-    availableVehicles.value.splice(selectedVehicleIndex.value, 1);
-    availableDrivers.value.splice(selectedDriverIndex.value, 1);
+    // Refresh vehicles and drivers since status changed on backend
+    await fetchVehicles();
+    await fetchDrivers();
 
     // Reset indices and modal
     selectedVehicleIndex.value = -1;
@@ -455,24 +442,19 @@ const dispatchTrip = async () => {
     newTrip.planned_distance = 0;
     
     showToast('Fleet dispatch started successfully!', 'success');
+  } catch (err) {
+    showToast(err.message || 'Failed to dispatch trip.', 'error');
+  } finally {
     isSubmitting.value = false;
-  }, 1000);
+  }
 };
 
-const completeTrip = (trip) => {
-  trip.status = 'Completed';
-  trip.eta = 'Arrived';
-  availableVehicles.value.push({ id: availableVehicles.value.length + 10, registration_number: trip.vehicle_id, vehicle_name: 'Fleet Restored', max_load_capacity: 800, status: 'Available' });
-  availableDrivers.value.push({ id: availableDrivers.value.length + 10, name: trip.driver_id, license_number: 'MOCK-DL-RESTORED', safety_score: 85, status: 'Active', license_expiry_date: '2027-09-20' });
-  showToast('Trip dispatches completed successfully and logged!', 'success');
+const completeTrip = async (trip) => {
+  showToast('Simulated: Complete trip action logged.', 'info');
 };
 
-const cancelTrip = (trip) => {
-  trip.status = 'Cancelled';
-  trip.eta = 'Cancelled';
-  availableVehicles.value.push({ id: availableVehicles.value.length + 10, registration_number: trip.vehicle_id, vehicle_name: 'Fleet Restored', max_load_capacity: 800, status: 'Available' });
-  availableDrivers.value.push({ id: availableDrivers.value.length + 10, name: trip.driver_id, license_number: 'MOCK-DL-RESTORED', safety_score: 85, status: 'Active', license_expiry_date: '2027-09-20' });
-  showToast('Trip assignment cancelled.', 'info');
+const cancelTrip = async (trip) => {
+  showToast('Simulated: Cancel trip action logged.', 'info');
 };
 
 const selectForEdit = (trip) => {

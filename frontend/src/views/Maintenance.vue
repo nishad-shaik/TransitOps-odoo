@@ -161,10 +161,10 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { Wrench } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
-
+import { useApiResource } from '../composables/useApiResource';
 
 const { showToast } = useToast();
 
@@ -172,16 +172,16 @@ const showLogForm = ref(false);
 const isSubmitting = ref(false);
 const expandedLogs = ref([]);
 
-const vehicles = ref([
-  { id: 1, registration_number: 'VAN-05', vehicle_name: 'Ford Transit 350', status: 'Available' },
-  { id: 2, registration_number: 'TRK-02', vehicle_name: 'Volvo FH16 Heavy', status: 'On Trip' },
-  { id: 4, registration_number: 'VAN-02', vehicle_name: 'Mercedes Sprinter Cargo', status: 'In Shop' }
-]);
+const { data: apiVehicles, fetch: fetchVehicles } = useApiResource('/vehicles');
+const { data: apiLogs, fetch: fetchLogs, create: createLog } = useApiResource('/maintenance');
 
-const logs = ref([
-  { id: 201, vehicle_id: 'VAN-02', description: 'Brake Pad Replacement', cost: 450, date: '2026-07-10', status: 'Open' },
-  { id: 200, vehicle_id: 'VAN-05', description: 'Annual General Inspection', cost: 150, date: '2026-06-18', status: 'Closed' }
-]);
+const vehicles = computed(() => apiVehicles.value || []);
+const logs = computed(() => apiLogs.value || []);
+
+onMounted(() => {
+  fetchVehicles();
+  fetchLogs();
+});
 
 const newLog = reactive({
   vehicle_id: '',
@@ -221,49 +221,34 @@ const saveMaintenanceLog = async () => {
   }
 
   isSubmitting.value = true;
-
-  // Prevent duplicate submissions and trigger success toast
-  setTimeout(() => {
-    const newId = logs.value.length > 0 ? Math.max(...logs.value.map(l => l.id)) + 1 : 201;
-    
-    logs.value.unshift({
-      id: newId,
+  try {
+    await createLog({
       vehicle_id: selectReg,
       description: String(newLog.description).trim(),
       cost: Number(newLog.cost),
-      date: newLog.date,
-      status: newLog.status
+      date: newLog.date
     });
 
-    if (newLog.status === 'Open') {
-      targetVehicle.status = 'In Shop';
-    }
+    // Refresh vehicles since status updated to "In Shop" / "Maintenance"
+    await fetchVehicles();
 
-    showToast(`Maintenance log #${newId} recorded successfully!`, 'success');
+    showToast(`Maintenance log recorded successfully!`, 'success');
     showLogForm.value = false;
-    isSubmitting.value = false;
 
     // Reset Form
     newLog.vehicle_id = '';
     newLog.description = '';
     newLog.cost = 0;
     newLog.status = 'Open';
-  }, 800);
+  } catch (err) {
+    showToast(err.message || 'Failed to record maintenance log.', 'error');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const closeLog = async (log) => {
-  if (isSubmitting.value) return;
-  isSubmitting.value = true;
-
-  setTimeout(() => {
-    log.status = 'Closed';
-    const targetVehicle = vehicles.value.find(v => v.registration_number === log.vehicle_id);
-    if (targetVehicle) {
-      targetVehicle.status = 'Available';
-    }
-    showToast(`Maintenance log #${log.id} marked as closed. Vehicle returns to Available status.`, 'success');
-    isSubmitting.value = false;
-  }, 500);
+  showToast('Simulated: Close log record action triggered.', 'info');
 };
 </script>
 
