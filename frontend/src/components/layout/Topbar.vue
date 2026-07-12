@@ -38,7 +38,11 @@ const currentRouteName = computed(() => {
 
 // Shared-Device Safe Logout sequence clearing all session indicators
 const handleLogout = () => {
-  // Clear reactive caches and persistent credentials
+  // Reset component reactive state
+  userEmail.value = 'Active User';
+  userRole.value = 'Guest';
+
+  // Shred all persistent session indicators
   localStorage.clear();
   sessionStorage.clear();
   

@@ -24,69 +24,132 @@
 
     <!-- Tables Grid -->
     <div class="expense-grids">
-      <!-- Fuel Logs Table Card -->
+      <!-- Fuel Logs Table Card (Desktop: md and above) -->
       <div class="card grid-card">
         <div class="card-header">
           <h3>Fuel Logs</h3>
           <p class="card-subtitle font-bold">Fuel card fill receipts</p>
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Vehicle</th>
-              <th>Date</th>
-              <th>Liters</th>
-              <th>Fuel Cost ($)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="log in fuelLogs" :key="log.id">
-              <td class="font-bold highlight-text">{{ log.vehicle }}</td>
-              <td>{{ log.date }}</td>
-              <td class="font-bold">{{ log.liters }} L</td>
-              <td class="font-bold">${{ log.cost.toLocaleString() }}</td>
-            </tr>
-          </tbody>
-        </table>
+
+        <!-- Desktop Table -->
+        <div class="hidden md:block">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Date</th>
+                <th>Liters</th>
+                <th>Fuel Cost ($)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="log in fuelLogs" :key="log.id">
+                <td class="font-bold highlight-text">{{ log.vehicle }}</td>
+                <td>{{ log.date }}</td>
+                <td class="font-bold">{{ log.liters }} L</td>
+                <td class="font-bold">${{ log.cost.toLocaleString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Accordion -->
+        <div class="mobile-accordion-list block md:hidden">
+          <div 
+            v-for="log in fuelLogs" 
+            :key="'m-fuel-' + log.id" 
+            class="card mobile-accordion-card"
+            :class="{ expanded: expandedFuelIds.includes(log.id) }"
+          >
+            <div class="accordion-header" @click="toggleFuelAccordion(log.id)">
+              <div class="vital-col font-bold text-white">{{ log.vehicle }}</div>
+              <div class="vital-col font-bold">${{ log.cost.toLocaleString() }}</div>
+              <div class="vital-col text-right pr-4">{{ log.liters }} L</div>
+              <span class="chevron">&#9662;</span>
+            </div>
+            <div class="accordion-content" v-if="expandedFuelIds.includes(log.id)">
+              <div class="meta-row">
+                <span class="lbl">Date:</span>
+                <span class="val font-mono">{{ log.date }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Other Expenses Table Card -->
+      <!-- Other Expenses Table Card (Desktop: md and above) -->
       <div class="card grid-card">
         <div class="card-header">
           <h3>Other Expenses</h3>
           <p class="card-subtitle font-bold">Tolls, maintenance, and fees</p>
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Trip ID</th>
-              <th>Vehicle</th>
-              <th>Tolls ($)</th>
-              <th>Other ($)</th>
-              <th>Maint. Linked</th>
-              <th>Total ($)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="exp in expenses" :key="exp.id">
-              <td class="font-mono highlight-text">#{{ exp.tripId }}</td>
-              <td class="font-bold">{{ exp.vehicle }}</td>
-              <td>${{ exp.tolls }}</td>
-              <td>${{ exp.other }}</td>
-              <td>
-                <span class="maint-link" v-if="exp.maintId">
-                  Maint #{{ exp.maintId }}
-                </span>
-                <span v-else class="text-muted">None</span>
-              </td>
-              <td class="font-bold highlight-text">${{ (exp.tolls + exp.other).toLocaleString() }}</td>
-            </tr>
-          </tbody>
-        </table>
+
+        <!-- Desktop Table -->
+        <div class="hidden md:block">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Trip ID</th>
+                <th>Vehicle</th>
+                <th>Tolls ($)</th>
+                <th>Other ($)</th>
+                <th>Maint. Linked</th>
+                <th>Total ($)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="exp in expenses" :key="exp.id">
+                <td class="font-mono highlight-text">#{{ exp.tripId }}</td>
+                <td class="font-bold">{{ exp.vehicle }}</td>
+                <td>${{ exp.tolls }}</td>
+                <td>${{ exp.other }}</td>
+                <td>
+                  <span class="maint-link" v-if="exp.maintId">
+                    Maint #{{ exp.maintId }}
+                  </span>
+                  <span v-else class="text-muted">None</span>
+                </td>
+                <td class="font-bold highlight-text">${{ (exp.tolls + exp.other).toLocaleString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Accordion -->
+        <div class="mobile-accordion-list block md:hidden">
+          <div 
+            v-for="exp in expenses" 
+            :key="'m-exp-' + exp.id" 
+            class="card mobile-accordion-card"
+            :class="{ expanded: expandedExpIds.includes(exp.id) }"
+          >
+            <div class="accordion-header" @click="toggleExpAccordion(exp.id)">
+              <div class="vital-col font-mono font-bold text-white">#{{ exp.tripId }}</div>
+              <div class="vital-col font-bold">{{ exp.vehicle }}</div>
+              <div class="vital-col text-right pr-4 font-bold">${{ (exp.tolls + exp.other).toLocaleString() }}</div>
+              <span class="chevron">&#9662;</span>
+            </div>
+            <div class="accordion-content" v-if="expandedExpIds.includes(exp.id)">
+              <div class="meta-row">
+                <span class="lbl">Tolls:</span>
+                <span class="val font-mono">${{ exp.tolls }}</span>
+              </div>
+              <div class="meta-row">
+                <span class="lbl">Other Costs:</span>
+                <span class="val font-mono">${{ exp.other }}</span>
+              </div>
+              <div class="meta-row">
+                <span class="lbl">Linked Maintenance:</span>
+                <span class="val" v-if="exp.maintId">Maint #{{ exp.maintId }}</span>
+                <span class="val text-muted" v-else>None</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Modals -->
+    <!-- Fuel Log Modal -->
     <div v-if="showFuelModal" class="modal-overlay" @click.self="showFuelModal = false">
       <div class="modal">
         <div class="modal-header">
@@ -114,12 +177,15 @@
           </div>
           <div class="modal-actions">
             <button type="button" @click="showFuelModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary">Save Fuel Log</button>
+            <button type="submit" class="btn-primary" :disabled="isSubmitting">
+              {{ isSubmitting ? 'Posting...' : 'Save Fuel Log' }}
+            </button>
           </div>
         </form>
       </div>
     </div>
 
+    <!-- Expense Modal -->
     <div v-if="showExpenseModal" class="modal-overlay" @click.self="showExpenseModal = false">
       <div class="modal">
         <div class="modal-header">
@@ -153,7 +219,9 @@
           </div>
           <div class="modal-actions">
             <button type="button" @click="showExpenseModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary">Save Expense</button>
+            <button type="submit" class="btn-primary" :disabled="isSubmitting">
+              {{ isSubmitting ? 'Posting...' : 'Save Expense' }}
+            </button>
           </div>
         </form>
       </div>
@@ -163,9 +231,15 @@
 
 <script setup>
 import { ref, computed, reactive } from 'vue';
+import { useToast } from '../composables/useToast';
+
+const { showToast } = useToast();
 
 const showFuelModal = ref(false);
 const showExpenseModal = ref(false);
+const isSubmitting = ref(false);
+const expandedFuelIds = ref([]);
+const expandedExpIds = ref([]);
 
 const fuelLogs = ref([
   { id: 1, vehicle: 'VAN-05', date: '2026-07-11', liters: 45, cost: 90 },
@@ -176,7 +250,7 @@ const fuelLogs = ref([
 const expenses = ref([
   { id: 1, tripId: 1045, vehicle: 'VAN-05', tolls: 15, other: 5, maintId: null },
   { id: 2, tripId: 1044, vehicle: 'TRK-02', tolls: 85, other: 24, maintId: null },
-  { id: 3, vehicle: 'VAN-02', tolls: 0, other: 0, maintId: 201 }
+  { id: 3, tripId: 1043, vehicle: 'VAN-02', tolls: 0, other: 0, maintId: 201 }
 ]);
 
 const simulatedMaintenanceCost = 600;
@@ -185,6 +259,22 @@ const totalOperationalCost = computed(() => {
   const fuelTotal = fuelLogs.value.reduce((acc, log) => acc + log.cost, 0);
   return fuelTotal + simulatedMaintenanceCost;
 });
+
+const toggleFuelAccordion = (id) => {
+  if (expandedFuelIds.value.includes(id)) {
+    expandedFuelIds.value = expandedFuelIds.value.filter(i => i !== id);
+  } else {
+    expandedFuelIds.value.push(id);
+  }
+};
+
+const toggleExpAccordion = (id) => {
+  if (expandedExpIds.value.includes(id)) {
+    expandedExpIds.value = expandedExpIds.value.filter(i => i !== id);
+  } else {
+    expandedExpIds.value.push(id);
+  }
+};
 
 const newFuel = reactive({
   vehicle: '',
@@ -201,28 +291,82 @@ const newExpense = reactive({
   maintId: null
 });
 
-const saveFuelLog = () => {
-  fuelLogs.value.unshift({
-    id: fuelLogs.value.length + 1,
-    ...newFuel
-  });
-  showFuelModal.value = false;
-  newFuel.vehicle = '';
-  newFuel.liters = 0;
-  newFuel.cost = 0;
+const saveFuelLog = async () => {
+  if (isSubmitting.value) return;
+
+  const vehicleId = String(newFuel.vehicle).trim();
+  const liters = Number(newFuel.liters);
+  const cost = Number(newFuel.cost);
+
+  if (!vehicleId) {
+    showToast('Validation Error: Vehicle identifier is required.', 'error');
+    return;
+  }
+  if (liters <= 0 || cost <= 0) {
+    showToast('Validation Error: Liters and Cost must be positive values.', 'error');
+    return;
+  }
+
+  isSubmitting.value = true;
+
+  setTimeout(() => {
+    fuelLogs.value.unshift({
+      id: fuelLogs.value.length + 1,
+      vehicle: vehicleId,
+      liters,
+      cost,
+      date: newFuel.date
+    });
+
+    showToast(`Fuel log for ${vehicleId} posted successfully!`, 'success');
+    showFuelModal.value = false;
+    isSubmitting.value = false;
+
+    newFuel.vehicle = '';
+    newFuel.liters = 0;
+    newFuel.cost = 0;
+  }, 600);
 };
 
-const saveExpense = () => {
-  expenses.value.unshift({
-    id: expenses.value.length + 1,
-    ...newExpense
-  });
-  showExpenseModal.value = false;
-  newExpense.tripId = 0;
-  newExpense.vehicle = '';
-  newExpense.tolls = 0;
-  newExpense.other = 0;
-  newExpense.maintId = null;
+const saveExpense = async () => {
+  if (isSubmitting.value) return;
+
+  const tripId = Number(newExpense.tripId);
+  const vehicleId = String(newExpense.vehicle).trim();
+  const tolls = Number(newExpense.tolls);
+  const other = Number(newExpense.other);
+
+  if (!vehicleId || tripId <= 0) {
+    showToast('Validation Error: Trip ID and Vehicle are required.', 'error');
+    return;
+  }
+  if (tolls < 0 || other < 0) {
+    showToast('Validation Error: Cost values cannot be negative.', 'error');
+    return;
+  }
+
+  isSubmitting.value = true;
+
+  setTimeout(() => {
+    expenses.value.unshift({
+      id: expenses.value.length + 1,
+      tripId,
+      vehicle: vehicleId,
+      tolls,
+      other,
+      maintId: newExpense.maintId || null
+    });
+
+    showToast(`Expense for Trip #${tripId} posted successfully!`, 'success');
+    showExpenseModal.value = false;
+    isSubmitting.value = false;
+
+    newExpense.tripId = 0;
+    newExpense.vehicle = '';
+    newExpense.tolls = 0;
+    newExpense.other = 0;
+    newExpense.maintId = null;
+  }, 600);
 };
 </script>
 
@@ -337,6 +481,75 @@ const saveExpense = () => {
   border-radius: var(--border-radius-sm);
   font-weight: 700;
 }
+
+/* Mobile Accordion */
+.mobile-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-accordion-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--border-radius-md);
+  transition: border-color 0.2s ease;
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+}
+
+.vital-col {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.chevron {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.mobile-accordion-card.expanded .chevron {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  background-color: rgba(255, 255, 255, 0.01);
+  border-top: 1px solid var(--border-color);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.meta-row .lbl {
+  color: var(--text-secondary);
+}
+
+.meta-row .val {
+  color: #fff;
+  font-weight: 600;
+}
+
+.text-white { color: #fff; }
 
 /* Modal Headers */
 .modal-header {
