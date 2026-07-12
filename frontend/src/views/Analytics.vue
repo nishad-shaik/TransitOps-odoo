@@ -150,6 +150,7 @@
               <th>Maintenance</th>
               <th>Fuel</th>
               <th>Acquisition</th>
+              <th>Fuel Efficiency</th>
               <th>Calculated ROI</th>
               <th>Status</th>
             </tr>
@@ -163,8 +164,11 @@
               <td>${{ v.maintenance.toLocaleString() }}</td>
               <td>${{ v.fuel.toLocaleString() }}</td>
               <td>${{ v.acqCost.toLocaleString() }}</td>
+              <td class="font-mono text-cyan-400 font-bold">
+                {{ (v.distance / v.fuelLiters).toFixed(1) }} km/L
+              </td>
               <td class="font-bold" :class="getRoiClass(calculateRoi(v))">
-                {{ calculateRoi(v) }}%
+                {{ (((v.revenue - (v.maintenance + v.fuel)) / v.acqCost) * 100).toFixed(1) }}%
               </td>
               <td>
                 <span class="badge" :class="statusBadgeClass(v.status)">
@@ -173,7 +177,7 @@
               </td>
             </tr>
             <tr v-if="filteredRoiData.length === 0">
-              <td colspan="9" class="text-center empty-grid-row">No records match the active search and filter parameters.</td>
+              <td colspan="10" class="text-center empty-grid-row">No records match the active search and filter parameters.</td>
             </tr>
           </tbody>
         </table>
@@ -186,7 +190,6 @@
 import { ref, computed, onMounted } from 'vue';
 import { Download, CreditCard, Zap, BarChart3, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
-
 
 const { showToast } = useToast();
 
@@ -201,14 +204,14 @@ const typeOptions = ['Truck', 'Van', 'Sedan'];
 const statusOptions = ['Available', 'On Trip', 'In Shop'];
 const regionOptions = ['North', 'West', 'East', 'South'];
 
-// Analytical dataset containing costs and revenues
+// Analytical dataset containing costs and revenues with distance/liters for fuel efficiency calculations
 const roiData = ref([
-  { regNo: 'VAN-05', type: 'Van', status: 'Available', region: 'North', revenue: 12000, maintenance: 350, fuel: 600, acqCost: 35000 },
-  { regNo: 'TRK-02', type: 'Truck', status: 'On Trip', region: 'West', revenue: 45000, maintenance: 1800, fuel: 2000, acqCost: 145000 },
-  { regNo: 'SDN-01', type: 'Sedan', status: 'Available', region: 'East', revenue: 4800, maintenance: 120, fuel: 200, acqCost: 28000 },
-  { regNo: 'TRK-04', type: 'Truck', status: 'In Shop', region: 'South', revenue: 22000, maintenance: 2500, fuel: 1100, acqCost: 95000 },
-  { regNo: 'VAN-01', type: 'Van', status: 'On Trip', region: 'North', revenue: 15000, maintenance: 800, fuel: 1200, acqCost: 32000 },
-  { regNo: 'SDN-02', type: 'Sedan', status: 'In Shop', region: 'West', revenue: 3200, maintenance: 600, fuel: 150, acqCost: 29000 }
+  { regNo: 'VAN-05', type: 'Van', status: 'Available', region: 'North', revenue: 12000, maintenance: 350, fuel: 600, acqCost: 35000, distance: 4800, fuelLiters: 540 },
+  { regNo: 'TRK-02', type: 'Truck', status: 'On Trip', region: 'West', revenue: 45000, maintenance: 1800, fuel: 2000, acqCost: 145000, distance: 16000, fuelLiters: 2200 },
+  { regNo: 'SDN-01', type: 'Sedan', status: 'Available', region: 'East', revenue: 4800, maintenance: 120, fuel: 200, acqCost: 28000, distance: 3800, fuelLiters: 310 },
+  { regNo: 'TRK-04', type: 'Truck', status: 'In Shop', region: 'South', revenue: 22000, maintenance: 2500, fuel: 1100, acqCost: 95000, distance: 8800, fuelLiters: 1200 },
+  { regNo: 'VAN-01', type: 'Van', status: 'On Trip', region: 'North', revenue: 15000, maintenance: 800, fuel: 1200, acqCost: 32000, distance: 6200, fuelLiters: 700 },
+  { regNo: 'SDN-02', type: 'Sedan', status: 'In Shop', region: 'West', revenue: 3200, maintenance: 600, fuel: 150, acqCost: 29000, distance: 1900, fuelLiters: 160 }
 ]);
 
 const toggleDropdown = (menu) => {
@@ -288,11 +291,12 @@ const downloadCSV = () => {
   }
 
   let csvContent = 'data:text/csv;charset=utf-8,';
-  csvContent += 'Vehicle,Type,Region,Revenue ($),Maintenance ($),Fuel ($),Acquisition ($),ROI (%),Status\n';
+  csvContent += 'Vehicle,Type,Region,Revenue ($),Maintenance ($),Fuel ($),Acquisition ($),Fuel Efficiency (km/L),ROI (%),Status\n';
   
   filteredRoiData.value.forEach(row => {
     const roi = calculateRoi(row);
-    csvContent += `${row.regNo},${row.type},${row.region},${row.revenue},${row.maintenance},${row.fuel},${row.acqCost},${roi}%,${row.status}\n`;
+    const eff = (row.distance / row.fuelLiters).toFixed(1);
+    csvContent += `${row.regNo},${row.type},${row.region},${row.revenue},${row.maintenance},${row.fuel},${row.acqCost},${eff},${roi}%,${row.status}\n`;
   });
   
   const encodedUri = encodeURI(csvContent);
