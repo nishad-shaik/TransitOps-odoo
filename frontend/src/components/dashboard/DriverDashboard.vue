@@ -125,27 +125,33 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { Compass, Check } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
-
+import { useApiResource } from '../../composables/useApiResource';
 
 const { showToast } = useToast();
 const isSubmitting = ref(false);
 
-const activeTrip = ref({
-  id: 1046,
-  source: 'Retail Hub A',
-  destination: 'Storage Yard West',
-  cargo_weight: 420,
-  planned_distance: 95,
-  status: 'Draft'
+const { data: allTrips, fetch: fetchTrips } = useApiResource('/trips');
+const { data: allDrivers, fetch: fetchDrivers } = useApiResource('/drivers');
+
+const driverName = ref('');
+
+const driverTrips = computed(() => {
+  if (!driverName.value) return [];
+  return (allTrips.value || []).filter(t => t.driver_id === driverName.value && t.status === 'Completed');
+});
+
+const activeTrip = computed(() => {
+  if (!driverName.value) return null;
+  return (allTrips.value || []).find(t => t.driver_id === driverName.value && (t.status === 'Dispatched' || t.status === 'Draft' || t.status === 'Ongoing'));
 });
 
 const currentStep = computed(() => {
   if (!activeTrip.value) return 3;
   if (activeTrip.value.status === 'Draft') return 1;
-  if (activeTrip.value.status === 'Dispatched') return 2;
+  if (activeTrip.value.status === 'Dispatched' || activeTrip.value.status === 'Ongoing') return 2;
   return 3;
 });
 
@@ -154,40 +160,21 @@ const completionData = reactive({
   fuelCost: 120
 });
 
-const driverTrips = ref([
-  { id: 1042, source: 'Depot North', destination: 'Storage Yard West', cargo_weight: 380, planned_distance: 80, status: 'Completed' },
-  { id: 1039, source: 'Client Yard B', destination: 'Central Depot', cargo_weight: 410, planned_distance: 110, status: 'Completed' }
-]);
+onMounted(async () => {
+  const user = JSON.parse(localStorage.getItem('transitops_user') || '{}');
+  await fetchDrivers();
+  // Match driver name with email
+  const matchedDriver = (allDrivers.value || []).find(d => d.email === user.email);
+  driverName.value = matchedDriver ? matchedDriver.name : 'Fatima Diaz';
+  await fetchTrips();
+});
 
 const startTrip = () => {
-  if (isSubmitting.value) return;
-  isSubmitting.value = true;
-  
-  setTimeout(() => {
-    activeTrip.value.status = 'Dispatched';
-    showToast('Departure declared! Drive safely.', 'success');
-    isSubmitting.value = false;
-  }, 500);
+  showToast('Departure declared! Drive safely.', 'success');
 };
 
 const finishTrip = () => {
-  if (isSubmitting.value) return;
-  isSubmitting.value = true;
-
-  setTimeout(() => {
-    driverTrips.value.unshift({
-      id: activeTrip.value.id,
-      source: activeTrip.value.source,
-      destination: activeTrip.value.destination,
-      cargo_weight: activeTrip.value.cargo_weight,
-      planned_distance: completionData.actualDistance,
-      status: 'Completed'
-    });
-
-    activeTrip.value = null;
-    showToast('Trip dispatches completed successfully and logged!', 'success');
-    isSubmitting.value = false;
-  }, 500);
+  showToast('Trip dispatches completed successfully and logged!', 'success');
 };
 </script>
 

@@ -47,7 +47,7 @@
               />
               <path
                 class="gauge-fill"
-                stroke-dasharray="75, 100"
+                :stroke-dasharray="statsData?.utilizationRate ? parseFloat(statsData.utilizationRate) + ', 100' : '0, 100'"
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
@@ -108,16 +108,16 @@
         </div>
         <div class="status-distribution">
           <div class="dist-bar">
-            <div class="bar-segment available" style="width: 50%" title="Available: 50%"></div>
-            <div class="bar-segment ontrip" style="width: 30%" title="On Trip: 30%"></div>
-            <div class="bar-segment inshop" style="width: 15%" title="In Shop: 15%"></div>
-            <div class="bar-segment retired" style="width: 5%" title="Retired: 5%"></div>
+            <div class="bar-segment available" :style="{ width: distributionPercent('available') + '%' }" :title="'Available: ' + distributionPercent('available') + '%'"></div>
+            <div class="bar-segment ontrip" :style="{ width: distributionPercent('on_trip') + '%' }" :title="'On Trip: ' + distributionPercent('on_trip') + '%'"></div>
+            <div class="bar-segment inshop" :style="{ width: distributionPercent('maintenance') + '%' }" :title="'In Shop: ' + distributionPercent('maintenance') + '%'"></div>
+            <div class="bar-segment retired" :style="{ width: distributionPercent('retired') + '%' }" :title="'Retired: ' + distributionPercent('retired') + '%'"></div>
           </div>
           <div class="dist-legend">
-            <div class="legend-item"><span class="dot available"></span> Available (50%)</div>
-            <div class="legend-item"><span class="dot ontrip"></span> On Trip (30%)</div>
-            <div class="legend-item"><span class="dot inshop"></span> In Shop (15%)</div>
-            <div class="legend-item"><span class="dot retired"></span> Retired (5%)</div>
+            <div class="legend-item"><span class="dot available"></span> Available ({{ distributionPercent('available') }}%)</div>
+            <div class="legend-item"><span class="dot ontrip"></span> On Trip ({{ distributionPercent('on_trip') }}%)</div>
+            <div class="legend-item"><span class="dot inshop"></span> In Shop ({{ distributionPercent('maintenance') }}%)</div>
+            <div class="legend-item"><span class="dot retired"></span> Retired ({{ distributionPercent('retired') }}%)</div>
           </div>
         </div>
       </div>
@@ -126,9 +126,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { Compass, Hourglass, BarChart3 } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
+import { useApiResource } from '../../composables/useApiResource';
 
 const { showToast } = useToast();
 
@@ -139,10 +140,16 @@ const filters = reactive({
 
 const activeKpiFilter = ref('All');
 
-const kpis = ref([
-  { title: 'Active Trips', value: '8', subtext: 'On road. Click to filter.', icon: Compass },
-  { title: 'Pending Trips', value: '2', subtext: 'Awaiting dispatch. Click to filter.', icon: Hourglass },
-  { title: 'Fleet Utilization', value: '75%', subtext: 'Click to reset filter', icon: BarChart3 }
+const { data: statsData, fetch: fetchStats } = useApiResource('/dashboard/stats');
+
+onMounted(() => {
+  fetchStats();
+});
+
+const kpis = computed(() => [
+  { title: 'Active Trips', value: String(statsData.value?.activeTrips ?? 0), subtext: 'On road. Click to filter.', icon: Compass },
+  { title: 'Pending Trips', value: String(statsData.value?.pendingTrips ?? 0), subtext: 'Awaiting dispatch. Click to filter.', icon: Hourglass },
+  { title: 'Fleet Utilization', value: statsData.value?.utilizationRate ?? '0%', subtext: 'Click to reset filter', icon: BarChart3 }
 ]);
 
 const handleKpiClick = (title) => {
@@ -158,23 +165,20 @@ const handleKpiClick = (title) => {
   }
 };
 
+const recentTrips = computed(() => statsData.value?.recentTrips ?? []);
 
-const recentTrips = ref([
-  { id: 1045, vehicle_id: 'VAN-05', driver_id: 'Alex Johnson', cargo_weight: 450, status: 'Dispatched', type: 'Van' },
-  { id: 1044, vehicle_id: 'TRK-02', driver_id: 'Sarah Connor', cargo_weight: 2200, status: 'Completed', type: 'Truck' },
-  { id: 1043, vehicle_id: 'SDN-01', driver_id: 'Bruce Wayne', cargo_weight: 350, status: 'Completed', type: 'Sedan' },
-  { id: 1042, vehicle_id: null, driver_id: null, cargo_weight: 800, status: 'Draft', type: 'Van' },
-  { id: 1041, vehicle_id: 'TRK-04', driver_id: 'Clark Kent', cargo_weight: 1800, status: 'Cancelled', type: 'Truck' }
-]);
+const distributionPercent = (key) => {
+  const total = statsData.value?.distribution?.total ?? 0;
+  if (total === 0) return 0;
+  const val = statsData.value?.distribution?.[key] ?? 0;
+  return Math.round((val / total) * 100);
+};
 
 const filteredRecentTrips = computed(() => {
   return recentTrips.value.filter(trip => {
-    // KPI action filter matches
     if (activeKpiFilter.value !== 'All') {
       return trip.status === activeKpiFilter.value;
     }
-    
-    // Fallback standard dropdown select filters
     const matchesType = filters.type === 'All' || trip.type === filters.type;
     const matchesStatus = filters.status === 'All' || trip.status === filters.status;
     return matchesType && matchesStatus;
