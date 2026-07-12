@@ -24,16 +24,16 @@
         <div class="form-row">
           <div class="form-group">
             <label>Select Vehicle</label>
-            <select v-model="newLog.vehicle" required>
+            <select v-model="newLog.vehicle_id" required>
               <option value="">-- Choose Vehicle --</option>
-              <option v-for="v in vehicles" :key="v.regNo" :value="v.regNo">
-                {{ v.regNo }} - {{ v.model }} (Status: {{ v.status }})
+              <option v-for="v in vehicles" :key="v.registration_number" :value="v.registration_number">
+                {{ v.registration_number }} - {{ v.vehicle_name }} (Status: {{ v.status }})
               </option>
             </select>
           </div>
           <div class="form-group">
-            <label>Service Type</label>
-            <input type="text" v-model="newLog.serviceType" placeholder="e.g. Engine Oil Change, Brake Replacement" required />
+            <label>Service Description</label>
+            <input type="text" v-model="newLog.description" placeholder="e.g. Engine Oil Change, Brake Replacement" required />
           </div>
         </div>
 
@@ -51,7 +51,7 @@
         <div class="form-group">
           <label>Status</label>
           <select v-model="newLog.status">
-            <option value="Active">Active (Vehicle goes In Shop)</option>
+            <option value="Open">Open (Vehicle goes In Shop)</option>
             <option value="Closed">Closed (Vehicle returns to Available)</option>
           </select>
         </div>
@@ -72,7 +72,7 @@
           <tr>
             <th>Log ID</th>
             <th>Vehicle</th>
-            <th>Service Type</th>
+            <th>Service Description</th>
             <th>Cost ($)</th>
             <th>Date</th>
             <th>Status</th>
@@ -82,8 +82,8 @@
         <tbody>
           <tr v-for="log in logs" :key="log.id">
             <td class="font-mono">#{{ log.id }}</td>
-            <td class="font-bold highlight-text">{{ log.vehicle }}</td>
-            <td>{{ log.serviceType }}</td>
+            <td class="font-bold highlight-text">{{ log.vehicle_id }}</td>
+            <td>{{ log.description }}</td>
             <td class="font-bold">${{ log.cost.toLocaleString() }}</td>
             <td>{{ log.date }}</td>
             <td>
@@ -93,7 +93,7 @@
             </td>
             <td>
               <button
-                v-if="log.status === 'Active'"
+                v-if="log.status === 'Open'"
                 @click="closeLog(log)"
                 class="btn-text"
                 :disabled="isSubmitting"
@@ -120,7 +120,7 @@
       >
         <!-- Accordion Header: 3 Vital columns only -->
         <div class="accordion-header" @click="toggleLogAccordion(log.id)">
-          <div class="vital-col font-mono font-bold text-white">#{{ log.id }} - {{ log.vehicle }}</div>
+          <div class="vital-col font-mono font-bold text-white">#{{ log.id }} - {{ log.vehicle_id }}</div>
           <div class="vital-col">
             <span class="badge" :class="statusBadgeClass(log.status)">
               {{ log.status }}
@@ -134,7 +134,7 @@
         <div class="accordion-content" v-if="expandedLogs.includes(log.id)">
           <div class="meta-row">
             <span class="lbl">Service Details:</span>
-            <span class="val">{{ log.serviceType }}</span>
+            <span class="val">{{ log.description }}</span>
           </div>
           <div class="meta-row">
             <span class="lbl">Log Date:</span>
@@ -142,7 +142,7 @@
           </div>
           <div class="meta-row action-row">
             <button 
-              v-if="log.status === 'Active'" 
+              v-if="log.status === 'Open'" 
               @click="closeLog(log)" 
               class="btn-sm btn-accent"
               :disabled="isSubmitting"
@@ -171,22 +171,22 @@ const isSubmitting = ref(false);
 const expandedLogs = ref([]);
 
 const vehicles = ref([
-  { regNo: 'VAN-05', model: 'Ford Transit 350', status: 'Available' },
-  { regNo: 'TRK-02', model: 'Volvo FH16 Heavy', status: 'On Trip' },
-  { regNo: 'VAN-02', model: 'Mercedes Sprinter Cargo', status: 'In Shop' }
+  { id: 1, registration_number: 'VAN-05', vehicle_name: 'Ford Transit 350', status: 'Available' },
+  { id: 2, registration_number: 'TRK-02', vehicle_name: 'Volvo FH16 Heavy', status: 'On Trip' },
+  { id: 4, registration_number: 'VAN-02', vehicle_name: 'Mercedes Sprinter Cargo', status: 'In Shop' }
 ]);
 
 const logs = ref([
-  { id: 201, vehicle: 'VAN-02', serviceType: 'Brake Pad Replacement', cost: 450, date: '2026-07-10', status: 'Active' },
-  { id: 200, vehicle: 'VAN-05', serviceType: 'Annual General Inspection', cost: 150, date: '2026-06-18', status: 'Closed' }
+  { id: 201, vehicle_id: 'VAN-02', description: 'Brake Pad Replacement', cost: 450, date: '2026-07-10', status: 'Open' },
+  { id: 200, vehicle_id: 'VAN-05', description: 'Annual General Inspection', cost: 150, date: '2026-06-18', status: 'Closed' }
 ]);
 
 const newLog = reactive({
-  vehicle: '',
-  serviceType: '',
+  vehicle_id: '',
+  description: '',
   cost: 0,
   date: new Date().toISOString().split('T')[0],
-  status: 'Active'
+  status: 'Open'
 });
 
 const toggleLogAccordion = (id) => {
@@ -198,15 +198,14 @@ const toggleLogAccordion = (id) => {
 };
 
 const statusBadgeClass = (status) => {
-  return status === 'Active' ? 'badge-warning' : 'badge-success';
+  return status === 'Open' ? 'badge-warning' : 'badge-success';
 };
 
 const saveMaintenanceLog = async () => {
   if (isSubmitting.value) return;
 
-  // Cloned checks for local tamper-resistant validation
-  const selectReg = String(newLog.vehicle);
-  const targetVehicle = vehicles.value.find(v => v.regNo === selectReg);
+  const selectReg = String(newLog.vehicle_id);
+  const targetVehicle = vehicles.value.find(v => v.registration_number === selectReg);
 
   if (!targetVehicle) {
     showToast('Validation Error: Selected vehicle registry not found.', 'error');
@@ -227,14 +226,14 @@ const saveMaintenanceLog = async () => {
     
     logs.value.unshift({
       id: newId,
-      vehicle: selectReg,
-      serviceType: String(newLog.serviceType).trim(),
+      vehicle_id: selectReg,
+      description: String(newLog.description).trim(),
       cost: Number(newLog.cost),
       date: newLog.date,
       status: newLog.status
     });
 
-    if (newLog.status === 'Active') {
+    if (newLog.status === 'Open') {
       targetVehicle.status = 'In Shop';
     }
 
@@ -243,10 +242,10 @@ const saveMaintenanceLog = async () => {
     isSubmitting.value = false;
 
     // Reset Form
-    newLog.vehicle = '';
-    newLog.serviceType = '';
+    newLog.vehicle_id = '';
+    newLog.description = '';
     newLog.cost = 0;
-    newLog.status = 'Active';
+    newLog.status = 'Open';
   }, 800);
 };
 
@@ -256,7 +255,7 @@ const closeLog = async (log) => {
 
   setTimeout(() => {
     log.status = 'Closed';
-    const targetVehicle = vehicles.value.find(v => v.regNo === log.vehicle);
+    const targetVehicle = vehicles.value.find(v => v.registration_number === log.vehicle_id);
     if (targetVehicle) {
       targetVehicle.status = 'Available';
     }

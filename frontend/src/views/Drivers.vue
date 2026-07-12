@@ -60,23 +60,23 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="driver in filteredDrivers" :key="driver.licenseNo">
+          <tr v-for="driver in filteredDrivers" :key="driver.id">
             <td class="highlight-text">{{ driver.name }}</td>
-            <td class="font-mono">{{ driver.licenseNo }}</td>
+            <td class="font-mono">{{ driver.license_number }}</td>
             <td>
-              <span class="type-tag">{{ driver.category }}</span>
+              <span class="type-tag">{{ driver.license_category }}</span>
             </td>
             <td>
-              <div :class="{ 'text-expired': isExpired(driver.expiryDate) }">
-                {{ driver.expiryDate }}
-                <span v-if="isExpired(driver.expiryDate)" class="expiry-flag">EXPIRED</span>
+              <div :class="{ 'text-expired': isExpired(driver.license_expiry_date) }">
+                {{ driver.license_expiry_date }}
+                <span v-if="isExpired(driver.license_expiry_date)" class="expiry-flag">EXPIRED</span>
               </div>
             </td>
-            <td>{{ driver.contact }}</td>
+            <td>{{ driver.contact_number }}</td>
             <td class="font-bold">{{ driver.tripCompletionRate }}%</td>
             <td>
-              <span class="safety-badge" :class="getSafetyClass(driver.safetyScore)">
-                {{ driver.safetyScore }}/100
+              <span class="safety-badge" :class="getSafetyClass(driver.safety_score)">
+                {{ driver.safety_score }}/100
               </span>
             </td>
             <td>
@@ -105,12 +105,12 @@
     <div class="mobile-accordion-list block md:hidden">
       <div 
         v-for="driver in filteredDrivers" 
-        :key="'mobile-dr-' + driver.licenseNo" 
+        :key="'mobile-dr-' + driver.id" 
         class="card mobile-accordion-card"
-        :class="{ expanded: expandedDriverLicenses.includes(driver.licenseNo) }"
+        :class="{ expanded: expandedDriverLicenses.includes(driver.license_number) }"
       >
         <!-- Accordion Header: 3 Vital columns only -->
-        <div class="accordion-header" @click="toggleDriverAccordion(driver.licenseNo)">
+        <div class="accordion-header" @click="toggleDriverAccordion(driver.license_number)">
           <div class="vital-col font-bold text-white">{{ driver.name }}</div>
           <div class="vital-col">
             <span class="badge" :class="statusBadgeClass(driver.status)">
@@ -118,33 +118,33 @@
             </span>
           </div>
           <div class="vital-col text-right pr-4">
-            <span class="safety-badge" :class="getSafetyClass(driver.safetyScore)">
-              {{ driver.safetyScore }}/100
+            <span class="safety-badge" :class="getSafetyClass(driver.safety_score)">
+              {{ driver.safety_score }}/100
             </span>
           </div>
           <span class="chevron">&#9662;</span>
         </div>
 
         <!-- Expanded Accordion Content -->
-        <div class="accordion-content" v-if="expandedDriverLicenses.includes(driver.licenseNo)">
+        <div class="accordion-content" v-if="expandedDriverLicenses.includes(driver.license_number)">
           <div class="meta-row">
             <span class="lbl">License No:</span>
-            <span class="val font-mono">{{ driver.licenseNo }}</span>
+            <span class="val font-mono">{{ driver.license_number }}</span>
           </div>
           <div class="meta-row">
             <span class="lbl">Category:</span>
-            <span class="val">{{ driver.category }}</span>
+            <span class="val">{{ driver.license_category }}</span>
           </div>
           <div class="meta-row">
             <span class="lbl">Expiry Date:</span>
-            <span class="val" :class="{ 'text-expired': isExpired(driver.expiryDate) }">
-              {{ driver.expiryDate }}
-              <span v-if="isExpired(driver.expiryDate)" class="expiry-flag ml-1">EXPIRED</span>
+            <span class="val" :class="{ 'text-expired': isExpired(driver.license_expiry_date) }">
+              {{ driver.license_expiry_date }}
+              <span v-if="isExpired(driver.license_expiry_date)" class="expiry-flag ml-1">EXPIRED</span>
             </span>
           </div>
           <div class="meta-row">
             <span class="lbl">Contact:</span>
-            <span class="val font-mono">{{ driver.contact }}</span>
+            <span class="val font-mono">{{ driver.contact_number }}</span>
           </div>
           <div class="meta-row">
             <span class="lbl">Trip Completion:</span>
@@ -181,11 +181,11 @@
           <div class="form-row">
             <div class="form-group">
               <label>License Number</label>
-              <input type="text" v-model="newDriver.licenseNo" placeholder="e.g. DL-987654" required />
+              <input type="text" v-model="newDriver.license_number" placeholder="e.g. DL-987654" required />
             </div>
             <div class="form-group">
               <label>Category</label>
-              <select v-model="newDriver.category">
+              <select v-model="newDriver.license_category">
                 <option value="Class A">Class A (Heavy Truck)</option>
                 <option value="Class B">Class B (Commercial)</option>
                 <option value="Class C">Class C (Regular)</option>
@@ -195,16 +195,16 @@
           <div class="form-row">
             <div class="form-group">
               <label>License Expiry</label>
-              <input type="date" v-model="newDriver.expiryDate" required />
+              <input type="date" v-model="newDriver.license_expiry_date" required />
             </div>
             <div class="form-group">
               <label>Contact Number</label>
-              <input type="text" v-model="newDriver.contact" placeholder="e.g. +1 555-0199" required />
+              <input type="text" v-model="newDriver.contact_number" placeholder="e.g. +1 555-0199" required />
             </div>
           </div>
           <div class="form-group">
             <label>Initial Safety Score (0-100)</label>
-            <input type="number" v-model.number="newDriver.safetyScore" min="0" max="100" required />
+            <input type="number" v-model.number="newDriver.safety_score" min="0" max="100" required />
           </div>
           <div class="modal-actions">
             <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>
@@ -232,21 +232,21 @@ const isSubmitting = ref(false);
 const expandedDriverLicenses = ref([]);
 
 const drivers = ref([
-  { name: 'Alex Johnson', licenseNo: 'DL-55291', category: 'Class B', expiryDate: '2027-08-14', contact: '555-0144', tripCompletionRate: 98, safetyScore: 92, status: 'Available' },
-  { name: 'Sarah Connor', licenseNo: 'DL-88210', category: 'Class A', expiryDate: '2028-11-20', contact: '555-0182', tripCompletionRate: 100, safetyScore: 98, status: 'On Trip' },
-  { name: 'Bruce Wayne', licenseNo: 'DL-00707', category: 'Class C', expiryDate: '2026-02-15', contact: '555-0199', tripCompletionRate: 94, safetyScore: 89, status: 'Available' },
-  { name: 'Jack Torrance', licenseNo: 'DL-66611', category: 'Class B', expiryDate: '2024-05-10', contact: '555-0133', tripCompletionRate: 80, safetyScore: 45, status: 'Suspended' },
-  { name: 'Peter Parker', licenseNo: 'DL-12290', category: 'Class C', expiryDate: '2028-09-05', contact: '555-0121', tripCompletionRate: 99, safetyScore: 95, status: 'Off Duty' }
+  { id: 1, name: 'Alex Johnson', license_number: 'DL-55291', license_category: 'Class B', license_expiry_date: '2027-08-14', contact_number: '555-0144', tripCompletionRate: 98, safety_score: 92, status: 'Available' },
+  { id: 2, name: 'Sarah Connor', license_number: 'DL-88210', license_category: 'Class A', license_expiry_date: '2028-11-20', contact_number: '555-0182', tripCompletionRate: 100, safety_score: 98, status: 'On Trip' },
+  { id: 3, name: 'Bruce Wayne', license_number: 'DL-00707', license_category: 'Class C', license_expiry_date: '2026-02-15', contact_number: '555-0199', tripCompletionRate: 94, safety_score: 89, status: 'Available' },
+  { id: 4, name: 'Jack Torrance', license_number: 'DL-66611', license_category: 'Class B', license_expiry_date: '2024-05-10', contact_number: '555-0133', tripCompletionRate: 80, safety_score: 45, status: 'Suspended' },
+  { id: 5, name: 'Peter Parker', license_number: 'DL-12290', license_category: 'Class C', license_expiry_date: '2028-09-05', contact_number: '555-0121', tripCompletionRate: 99, safety_score: 95, status: 'Off Duty' }
 ]);
 
 const newDriver = reactive({
   name: '',
-  licenseNo: '',
-  category: 'Class C',
-  expiryDate: '',
-  contact: '',
+  license_number: '',
+  license_category: 'Class C',
+  license_expiry_date: '',
+  contact_number: '',
   tripCompletionRate: 100,
-  safetyScore: 90,
+  safety_score: 90,
   status: 'Available'
 });
 
@@ -280,14 +280,14 @@ const toggleDriverAccordion = (licenseNo) => {
 const filteredDrivers = computed(() => {
   return drivers.value.filter(d => {
     const matchesSearch = d.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
-                          d.licenseNo.toLowerCase().includes(searchQuery.value.toLowerCase());
+                          d.license_number.toLowerCase().includes(searchQuery.value.toLowerCase());
     const matchesStatus = filterStatus.value === 'All' || d.status === filterStatus.value;
     
     let matchesCompliance = true;
     if (filterCompliance.value === 'Valid') {
-      matchesCompliance = !isExpired(d.expiryDate);
+      matchesCompliance = !isExpired(d.license_expiry_date);
     } else if (filterCompliance.value === 'Expired') {
-      matchesCompliance = isExpired(d.expiryDate);
+      matchesCompliance = isExpired(d.license_expiry_date);
     }
     
     return matchesSearch && matchesStatus && matchesCompliance;
@@ -315,8 +315,8 @@ const toggleStatus = async (driver) => {
 const saveDriver = async () => {
   if (isSubmitting.value) return;
 
-  const licenseNoCopy = String(newDriver.licenseNo).trim();
-  const exists = drivers.value.some(d => d.licenseNo.toLowerCase() === licenseNoCopy.toLowerCase());
+  const licenseNoCopy = String(newDriver.license_number).trim();
+  const exists = drivers.value.some(d => d.license_number.toLowerCase() === licenseNoCopy.toLowerCase());
   
   if (exists) {
     showToast('Validation Error: License Number must be unique.', 'error');
@@ -327,13 +327,14 @@ const saveDriver = async () => {
 
   setTimeout(() => {
     drivers.value.push({
+      id: drivers.value.length + 1,
       name: String(newDriver.name).trim(),
-      licenseNo: licenseNoCopy,
-      category: newDriver.category,
-      expiryDate: newDriver.expiryDate,
-      contact: String(newDriver.contact).trim(),
+      license_number: licenseNoCopy,
+      license_category: newDriver.license_category,
+      license_expiry_date: newDriver.license_expiry_date,
+      contact_number: String(newDriver.contact_number).trim(),
       tripCompletionRate: 100,
-      safetyScore: Number(newDriver.safetyScore),
+      safety_score: Number(newDriver.safety_score),
       status: 'Available'
     });
 
@@ -343,10 +344,10 @@ const saveDriver = async () => {
 
     // Reset Form
     newDriver.name = '';
-    newDriver.licenseNo = '';
-    newDriver.expiryDate = '';
-    newDriver.contact = '';
-    newDriver.safetyScore = 90;
+    newDriver.license_number = '';
+    newDriver.license_expiry_date = '';
+    newDriver.contact_number = '';
+    newDriver.safety_score = 90;
   }, 800);
 };
 </script>

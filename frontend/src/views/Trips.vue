@@ -31,8 +31,8 @@
             <label>Select Vehicle (Available only)</label>
             <select v-model="selectedVehicleIndex" @change="handleVehicleChange">
               <option value="-1">-- Choose Vehicle --</option>
-              <option v-for="(v, index) in availableVehicles" :key="v.regNo" :value="index">
-                {{ v.regNo }} - {{ v.model }} (Max Load: {{ v.maxLoad }}kg | Status: {{ v.status }})
+              <option v-for="(v, index) in availableVehicles" :key="v.registration_number" :value="index">
+                {{ v.registration_number }} - {{ v.vehicle_name }} (Max Load: {{ v.max_load_capacity }}kg | Status: {{ v.status }})
               </option>
             </select>
           </div>
@@ -40,20 +40,20 @@
             <label>Select Driver (Available &amp; Valid only)</label>
             <select v-model="selectedDriverIndex">
               <option value="-1">-- Choose Driver --</option>
-              <option v-for="(d, index) in availableDrivers" :key="d.licenseNo" :value="index">
-                {{ d.name }} (Score: {{ d.safetyScore }} | Expiry: {{ d.licenseExpiry }})
+              <option v-for="(d, index) in availableDrivers" :key="d.license_number" :value="index">
+                {{ d.name }} (Score: {{ d.safety_score }} | Expiry: {{ d.license_expiry_date }})
               </option>
             </select>
           </div>
         </div>
 
-        <!-- Cargo weight with visual progressive validation bar -->
+        <!-- Cargo weight with progressive validation bar -->
         <div class="form-row">
           <div class="form-group">
             <label>Cargo Weight (kg)</label>
             <input
               type="number"
-              v-model.number="newTrip.cargoWeight"
+              v-model.number="newTrip.cargo_weight"
               @input="validateTripCapacity"
               required
             />
@@ -69,14 +69,14 @@
               </div>
               <div class="progress-metrics" :class="{ 'danger-text': capacityPercentage > 100 }">
                 <span>{{ Math.round(capacityPercentage) }}% Capacity Utilized</span>
-                <span>{{ newTrip.cargoWeight }} / {{ selectedVehicle.maxLoad }} kg</span>
+                <span>{{ newTrip.cargo_weight }} / {{ selectedVehicle.max_load_capacity }} kg</span>
               </div>
             </div>
           </div>
 
           <div class="form-group">
             <label>Planned Distance (km)</label>
-            <input type="number" v-model.number="newTrip.plannedDistance" required />
+            <input type="number" v-model.number="newTrip.planned_distance" required />
           </div>
         </div>
 
@@ -106,7 +106,7 @@
           <div v-for="t in getTripsByStatus('Draft')" :key="t.id" class="trip-card draft">
             <div class="card-title">Trip #{{ t.id }}</div>
             <div class="route-info"><strong>Route:</strong> {{ t.source }} &rarr; {{ t.destination }}</div>
-            <div class="details">Weight: {{ t.cargoWeight }}kg | Dist: {{ t.plannedDistance }}km</div>
+            <div class="details">Weight: {{ t.cargo_weight }}kg | Dist: {{ t.planned_distance }}km</div>
             <div class="notes font-bold text-muted">Awaiting vehicle &amp; driver assignment</div>
             <div class="actions">
               <button @click="selectForEdit(t)" class="btn-sm btn-accent">Assign</button>
@@ -126,8 +126,8 @@
             <div class="card-title">Trip #{{ t.id }}</div>
             <div class="route-info"><strong>Route:</strong> {{ t.source }} &rarr; {{ t.destination }}</div>
             <div class="assignment">
-              <div><strong>Vehicle:</strong> {{ t.vehicle }}</div>
-              <div><strong>Driver:</strong> {{ t.driver }}</div>
+              <div><strong>Vehicle:</strong> {{ t.vehicle_id }}</div>
+              <div><strong>Driver:</strong> {{ t.driver_id }}</div>
             </div>
             <div class="notes font-bold text-accent">ETA: {{ t.eta }}</div>
             <div class="actions">
@@ -149,10 +149,10 @@
             <div class="card-title">Trip #{{ t.id }}</div>
             <div class="route-info"><strong>Route:</strong> {{ t.source }} &rarr; {{ t.destination }}</div>
             <div class="assignment">
-              <div><strong>Vehicle:</strong> {{ t.vehicle }}</div>
-              <div><strong>Driver:</strong> {{ t.driver }}</div>
+              <div><strong>Vehicle:</strong> {{ t.vehicle_id }}</div>
+              <div><strong>Driver:</strong> {{ t.driver_id }}</div>
             </div>
-            <div class="details text-success font-bold">Odometer updated: +{{ t.plannedDistance }}km</div>
+            <div class="details text-success font-bold">Odometer updated: +{{ t.planned_distance }}km</div>
           </div>
           <div v-if="getTripsByStatus('Completed').length === 0" class="empty-state">No completed trips.</div>
         </div>
@@ -185,10 +185,10 @@
             <tr v-for="t in trips" :key="t.id">
               <td class="font-mono highlight-text">#{{ t.id }}</td>
               <td>{{ t.source }} &rarr; {{ t.destination }}</td>
-              <td>{{ t.vehicle || 'Not assigned' }}</td>
-              <td>{{ t.driver || 'Not assigned' }}</td>
-              <td>{{ t.cargoWeight }} kg</td>
-              <td>{{ t.plannedDistance }} km</td>
+              <td>{{ t.vehicle_id || 'Not assigned' }}</td>
+              <td>{{ t.driver_id || 'Not assigned' }}</td>
+              <td>{{ t.cargo_weight }} kg</td>
+              <td>{{ t.planned_distance }} km</td>
               <td>
                 <span class="badge" :class="badgeClass(t.status)">
                   {{ t.status }}
@@ -210,13 +210,13 @@
         >
           <!-- Accordion Header: 3 Vital columns only -->
           <div class="accordion-header" @click="toggleTripAccordion(t.id)">
-            <div class="vital-col font-mono font-bold text-white">#{{ t.id }} - {{ t.driver || 'Unassigned' }}</div>
+            <div class="vital-col font-mono font-bold text-white">#{{ t.id }} - {{ t.driver_id || 'Unassigned' }}</div>
             <div class="vital-col">
               <span class="badge" :class="badgeClass(t.status)">
                 {{ t.status }}
               </span>
             </div>
-            <div class="vital-col text-right pr-4 font-bold">{{ t.plannedDistance }} km</div>
+            <div class="vital-col text-right pr-4 font-bold">{{ t.planned_distance }} km</div>
             <span class="chevron">&#9662;</span>
           </div>
 
@@ -228,11 +228,11 @@
             </div>
             <div class="meta-row">
               <span class="lbl">Vehicle:</span>
-              <span class="val">{{ t.vehicle || 'Unassigned' }}</span>
+              <span class="val">{{ t.vehicle_id || 'Unassigned' }}</span>
             </div>
             <div class="meta-row">
               <span class="lbl">Cargo Load Weight:</span>
-              <span class="val font-mono">{{ t.cargoWeight }} kg</span>
+              <span class="val font-mono">{{ t.cargo_weight }} kg</span>
             </div>
             <div class="meta-row">
               <span class="lbl">Estimated ETA:</span>
@@ -261,7 +261,7 @@
             </div>
             <div class="summary-item">
               <span class="lbl">Vehicle assigned:</span>
-              <span class="val font-bold text-accent">{{ selectedVehicle.regNo }} ({{ selectedVehicle.model }})</span>
+              <span class="val font-bold text-accent">{{ selectedVehicle.registration_number }} ({{ selectedVehicle.vehicle_name }})</span>
             </div>
             <div class="summary-item">
               <span class="lbl">Driver assigned:</span>
@@ -269,7 +269,7 @@
             </div>
             <div class="summary-item">
               <span class="lbl">Cargo Load:</span>
-              <span class="val font-bold">{{ newTrip.cargoWeight }} kg</span>
+              <span class="val font-bold">{{ newTrip.cargo_weight }} kg</span>
             </div>
           </div>
         </div>
@@ -299,34 +299,34 @@ const validationError = ref('');
 const isSubmitting = ref(false);
 const expandedTrips = ref([]);
 
-// Available Vehicles Pool with varying compliance statuses
+// Available Vehicles Pool
 const availableVehicles = ref([
-  { regNo: 'VAN-05', model: 'Ford Transit 350', maxLoad: 500, status: 'Available' },
-  { regNo: 'SDN-01', model: 'Toyota Camry hybrid', maxLoad: 350, status: 'Available' },
-  { regNo: 'TRK-02', model: 'Volvo FH16 Heavy', maxLoad: 2500, status: 'In Shop' }, // In Shop
-  { regNo: 'TRK-04', model: 'Scania R500 Flatbed', maxLoad: 8000, status: 'Retired' }, // Retired
-  { regNo: 'VAN-01', model: 'Ram ProMaster', maxLoad: 600, status: 'On Trip' } // On Trip
+  { id: 1, registration_number: 'VAN-05', vehicle_name: 'Ford Transit 350', max_load_capacity: 500, status: 'Available' },
+  { id: 3, registration_number: 'SDN-01', vehicle_name: 'Toyota Camry hybrid', max_load_capacity: 350, status: 'Available' },
+  { id: 2, registration_number: 'TRK-02', vehicle_name: 'Volvo FH16 Heavy', max_load_capacity: 2500, status: 'In Shop' },
+  { id: 5, registration_number: 'TRK-04', vehicle_name: 'Scania R500 Flatbed', max_load_capacity: 8000, status: 'Retired' },
+  { id: 6, registration_number: 'VAN-01', vehicle_name: 'Ram ProMaster', max_load_capacity: 600, status: 'On Trip' }
 ]);
 
-// Available Drivers Pool with varying license statuses
+// Available Drivers Pool
 const availableDrivers = ref([
-  { name: 'Alex Johnson', licenseNo: 'DL-55291', safetyScore: 92, status: 'Active', licenseExpiry: '2026-12-15' },
-  { name: 'Peter Parker', licenseNo: 'DL-12290', safetyScore: 95, status: 'Active', licenseExpiry: '2027-04-10' },
-  { name: 'Bruce Wayne', licenseNo: 'DL-00707', safetyScore: 88, status: 'Suspended', licenseExpiry: '2026-11-20' }, // Suspended
-  { name: 'Jack Torrance', licenseNo: 'DL-66611', safetyScore: 45, status: 'Active', licenseExpiry: '2026-01-15' } // Expired (mock date 2026-07-12)
+  { id: 1, name: 'Alex Johnson', license_number: 'DL-55291', safety_score: 92, status: 'Active', license_expiry_date: '2026-12-15' },
+  { id: 5, name: 'Peter Parker', license_number: 'DL-12290', safety_score: 95, status: 'Active', license_expiry_date: '2027-04-10' },
+  { id: 3, name: 'Bruce Wayne', license_number: 'DL-00707', safety_score: 88, status: 'Suspended', license_expiry_date: '2026-11-20' },
+  { id: 4, name: 'Jack Torrance', license_number: 'DL-66611', safety_score: 45, status: 'Active', license_expiry_date: '2026-01-15' }
 ]);
 
 const trips = ref([
-  { id: 1045, source: 'Depot North', destination: 'Warehouse South', vehicle: 'VAN-05', driver: 'Alex Johnson', cargoWeight: 450, plannedDistance: 85, status: 'Dispatched', eta: '1h 15m' },
-  { id: 1044, source: 'Depot East', destination: 'Distribution Hub', vehicle: 'TRK-02', driver: 'Sarah Connor', cargoWeight: 2200, plannedDistance: 310, status: 'Completed', eta: 'Arrived' },
-  { id: 1042, source: 'Depot West', destination: 'Airport Cargo Terminal', vehicle: null, driver: null, cargoWeight: 800, plannedDistance: 45, status: 'Draft' }
+  { id: 1045, source: 'Depot North', destination: 'Warehouse South', vehicle_id: 'VAN-05', driver_id: 'Alex Johnson', cargo_weight: 450, planned_distance: 85, status: 'Dispatched', eta: '1h 15m' },
+  { id: 1044, source: 'Depot East', destination: 'Distribution Hub', vehicle_id: 'TRK-02', driver_id: 'Sarah Connor', cargo_weight: 2200, planned_distance: 310, status: 'Completed', eta: 'Arrived' },
+  { id: 1042, source: 'Depot West', destination: 'Airport Cargo Terminal', vehicle_id: null, driver_id: null, cargo_weight: 800, planned_distance: 45, status: 'Draft' }
 ]);
 
 const newTrip = reactive({
   source: '',
   destination: '',
-  cargoWeight: 0,
-  plannedDistance: 0
+  cargo_weight: 0,
+  planned_distance: 0
 });
 
 const toggleTripAccordion = (id) => {
@@ -352,15 +352,15 @@ const selectedDriver = computed(() => {
 });
 
 const capacityPercentage = computed(() => {
-  if (!selectedVehicle.value || !newTrip.cargoWeight) return 0;
-  return (newTrip.cargoWeight / selectedVehicle.value.maxLoad) * 100;
+  if (!selectedVehicle.value || !newTrip.cargo_weight) return 0;
+  return (newTrip.cargo_weight / selectedVehicle.value.max_load_capacity) * 100;
 });
 
 const validateTripCapacity = () => {
   validationError.value = '';
   if (selectedVehicle.value) {
-    if (newTrip.cargoWeight > selectedVehicle.value.maxLoad) {
-      const overage = newTrip.cargoWeight - selectedVehicle.value.maxLoad;
+    if (newTrip.cargo_weight > selectedVehicle.value.max_load_capacity) {
+      const overage = newTrip.cargo_weight - selectedVehicle.value.max_load_capacity;
       validationError.value = `Capacity exceeded by ${overage}kg — dispatch blocked`;
     }
   }
@@ -370,7 +370,6 @@ const handleVehicleChange = () => {
   validateTripCapacity();
 };
 
-// Hard business rules client validations on local clones
 const validateOperationalRules = () => {
   if (selectedVehicleIndex.value === -1 || selectedDriverIndex.value === -1) {
     showToast('Validation Error: Select both a vehicle and a driver.', 'error');
@@ -380,19 +379,19 @@ const validateOperationalRules = () => {
   // Clone local references
   const vehicle = { ...availableVehicles.value[selectedVehicleIndex.value] };
   const driver = { ...availableDrivers.value[selectedDriverIndex.value] };
-  const weight = Number(newTrip.cargoWeight);
+  const weight = Number(newTrip.cargo_weight);
 
   // 1. Capacity weight check
-  if (weight > vehicle.maxLoad) {
-    showToast(`Validation Error: Cargo Weight (${weight}kg) exceeds selected vehicle's Maximum Load Capacity (${vehicle.maxLoad}kg).`, 'error');
+  if (weight > vehicle.max_load_capacity) {
+    showToast(`Validation Error: Cargo Weight (${weight}kg) exceeds selected vehicle's Maximum Load Capacity (${vehicle.max_load_capacity}kg).`, 'error');
     return false;
   }
 
   // 2. Driver status and license validity checks
   const mockCurrentDate = new Date('2026-07-12');
-  const expiryDate = new Date(driver.licenseExpiry);
+  const expiryDate = new Date(driver.license_expiry_date);
   if (driver.status === 'Suspended' || expiryDate < mockCurrentDate) {
-    showToast(`Security Alert: Selected driver (${driver.name}) is Suspended or has an Expired license (${driver.licenseExpiry}).`, 'error');
+    showToast(`Security Alert: Selected driver (${driver.name}) is Suspended or has an Expired license (${driver.license_expiry_date}).`, 'error');
     return false;
   }
 
@@ -404,7 +403,7 @@ const validateOperationalRules = () => {
 
   // 4. Shop or Retired state check
   if (vehicle.status === 'In Shop' || vehicle.status === 'Retired') {
-    showToast(`Maintenance Blocked: Vehicle ${vehicle.regNo} has status '${vehicle.status}' and cannot be dispatched.`, 'error');
+    showToast(`Maintenance Blocked: Vehicle ${vehicle.registration_number} has status '${vehicle.status}' and cannot be dispatched.`, 'error');
     return false;
   }
 
@@ -416,7 +415,6 @@ const openConfirmationModal = () => {
   showConfirmModal.value = true;
 };
 
-// Rate-limited dispatch logic (Duplicate submissions prevention)
 const dispatchTrip = async () => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
@@ -429,10 +427,10 @@ const dispatchTrip = async () => {
       id: trips.value.length + 1041,
       source: String(newTrip.source).trim(),
       destination: String(newTrip.destination).trim(),
-      vehicle: vehicle.regNo,
-      driver: driver.name,
-      cargoWeight: Number(newTrip.cargoWeight),
-      plannedDistance: Number(newTrip.plannedDistance),
+      vehicle_id: vehicle.registration_number,
+      driver_id: driver.name,
+      cargo_weight: Number(newTrip.cargo_weight),
+      planned_distance: Number(newTrip.planned_distance),
       status: 'Dispatched',
       eta: '2h 30m'
     };
@@ -451,8 +449,8 @@ const dispatchTrip = async () => {
 
     newTrip.source = '';
     newTrip.destination = '';
-    newTrip.cargoWeight = 0;
-    newTrip.plannedDistance = 0;
+    newTrip.cargo_weight = 0;
+    newTrip.planned_distance = 0;
     
     showToast('Fleet dispatch started successfully!', 'success');
     isSubmitting.value = false;
@@ -462,24 +460,24 @@ const dispatchTrip = async () => {
 const completeTrip = (trip) => {
   trip.status = 'Completed';
   trip.eta = 'Arrived';
-  availableVehicles.value.push({ regNo: trip.vehicle, model: 'Fleet Restored', maxLoad: 800, status: 'Available' });
-  availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL-RESTORED', safetyScore: 85, status: 'Active', licenseExpiry: '2027-09-20' });
+  availableVehicles.value.push({ id: availableVehicles.value.length + 10, registration_number: trip.vehicle_id, vehicle_name: 'Fleet Restored', max_load_capacity: 800, status: 'Available' });
+  availableDrivers.value.push({ id: availableDrivers.value.length + 10, name: trip.driver_id, license_number: 'MOCK-DL-RESTORED', safety_score: 85, status: 'Active', license_expiry_date: '2027-09-20' });
   showToast('Trip dispatches completed successfully and logged!', 'success');
 };
 
 const cancelTrip = (trip) => {
   trip.status = 'Cancelled';
   trip.eta = 'Cancelled';
-  availableVehicles.value.push({ regNo: trip.vehicle, model: 'Fleet Restored', maxLoad: 800, status: 'Available' });
-  availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL-RESTORED', safetyScore: 85, status: 'Active', licenseExpiry: '2027-09-20' });
+  availableVehicles.value.push({ id: availableVehicles.value.length + 10, registration_number: trip.vehicle_id, vehicle_name: 'Fleet Restored', max_load_capacity: 800, status: 'Available' });
+  availableDrivers.value.push({ id: availableDrivers.value.length + 10, name: trip.driver_id, license_number: 'MOCK-DL-RESTORED', safety_score: 85, status: 'Active', license_expiry_date: '2027-09-20' });
   showToast('Trip assignment cancelled.', 'info');
 };
 
 const selectForEdit = (trip) => {
   newTrip.source = trip.source;
   newTrip.destination = trip.destination;
-  newTrip.cargoWeight = trip.cargoWeight;
-  newTrip.plannedDistance = trip.plannedDistance;
+  newTrip.cargo_weight = trip.cargo_weight;
+  newTrip.planned_distance = trip.planned_distance;
   showCreateForm.value = true;
 };
 

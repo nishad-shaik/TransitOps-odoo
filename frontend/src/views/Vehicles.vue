@@ -60,15 +60,15 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="vehicle in filteredVehicles" :key="vehicle.regNo">
-            <td class="font-mono highlight-text">{{ vehicle.regNo }}</td>
-            <td>{{ vehicle.model }}</td>
+          <tr v-for="vehicle in filteredVehicles" :key="vehicle.id">
+            <td class="font-mono highlight-text">{{ vehicle.registration_number }}</td>
+            <td>{{ vehicle.vehicle_name }}</td>
             <td>
               <span class="type-tag">{{ vehicle.type }}</span>
             </td>
-            <td>{{ vehicle.maxLoad.toLocaleString() }}</td>
+            <td>{{ vehicle.max_load_capacity.toLocaleString() }}</td>
             <td>{{ vehicle.odometer.toLocaleString() }}</td>
-            <td>${{ vehicle.acquisitionCost.toLocaleString() }}</td>
+            <td>${{ vehicle.acquisition_cost.toLocaleString() }}</td>
             <td>
               <span class="badge" :class="statusBadgeClass(vehicle.status)">
                 {{ vehicle.status }}
@@ -89,13 +89,13 @@
     <div class="mobile-accordion-list block md:hidden">
       <div 
         v-for="vehicle in filteredVehicles" 
-        :key="'mobile-' + vehicle.regNo" 
+        :key="'mobile-' + vehicle.id" 
         class="card mobile-accordion-card"
-        :class="{ expanded: expandedRegs.includes(vehicle.regNo) }"
+        :class="{ expanded: expandedRegs.includes(vehicle.registration_number) }"
       >
         <!-- Row Header: 3 Vital columns only -->
-        <div class="accordion-header" @click="toggleAccordion(vehicle.regNo)">
-          <div class="vital-col font-mono font-bold text-white">{{ vehicle.regNo }}</div>
+        <div class="accordion-header" @click="toggleAccordion(vehicle.registration_number)">
+          <div class="vital-col font-mono font-bold text-white">{{ vehicle.registration_number }}</div>
           <div class="vital-col">
             <span class="badge" :class="statusBadgeClass(vehicle.status)">
               {{ vehicle.status }}
@@ -106,10 +106,10 @@
         </div>
 
         <!-- Expanded Accordion Content -->
-        <div class="accordion-content" v-if="expandedRegs.includes(vehicle.regNo)">
+        <div class="accordion-content" v-if="expandedRegs.includes(vehicle.registration_number)">
           <div class="meta-row">
             <span class="lbl">Name/Model:</span>
-            <span class="val">{{ vehicle.model }}</span>
+            <span class="val">{{ vehicle.vehicle_name }}</span>
           </div>
           <div class="meta-row">
             <span class="lbl">Type:</span>
@@ -117,11 +117,11 @@
           </div>
           <div class="meta-row">
             <span class="lbl">Max Load Capacity:</span>
-            <span class="val font-mono">{{ vehicle.maxLoad.toLocaleString() }} kg</span>
+            <span class="val font-mono">{{ vehicle.max_load_capacity.toLocaleString() }} kg</span>
           </div>
           <div class="meta-row">
             <span class="lbl">Acquisition Cost:</span>
-            <span class="val font-mono">${{ vehicle.acquisitionCost.toLocaleString() }}</span>
+            <span class="val font-mono">${{ vehicle.acquisition_cost.toLocaleString() }}</span>
           </div>
           <div class="meta-row action-row">
             <button @click="editVehicle(vehicle)" class="btn-sm btn-accent">Edit Vehicle</button>
@@ -143,11 +143,11 @@
         <form @submit.prevent="saveVehicle">
           <div class="form-group">
             <label>Registration Number</label>
-            <input type="text" v-model="newVehicle.regNo" placeholder="e.g. VAN-05" required />
+            <input type="text" v-model="newVehicle.registration_number" placeholder="e.g. VAN-05" required />
           </div>
           <div class="form-group">
             <label>Name/Model</label>
-            <input type="text" v-model="newVehicle.model" placeholder="e.g. Ford Transit 350" required />
+            <input type="text" v-model="newVehicle.vehicle_name" placeholder="e.g. Ford Transit 350" required />
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -160,7 +160,7 @@
             </div>
             <div class="form-group">
               <label>Max Load Capacity (kg)</label>
-              <input type="number" v-model.number="newVehicle.maxLoad" required />
+              <input type="number" v-model.number="newVehicle.max_load_capacity" required />
             </div>
           </div>
           <div class="form-row">
@@ -170,7 +170,7 @@
             </div>
             <div class="form-group">
               <label>Acquisition Cost ($)</label>
-              <input type="number" v-model.number="newVehicle.acquisitionCost" required />
+              <input type="number" v-model.number="newVehicle.acquisition_cost" required />
             </div>
           </div>
           <div class="modal-actions">
@@ -199,20 +199,20 @@ const isSubmitting = ref(false);
 const expandedRegs = ref([]);
 
 const vehicles = ref([
-  { regNo: 'VAN-05', model: 'Ford Transit 350', type: 'Van', maxLoad: 500, odometer: 12450, acquisitionCost: 35000, status: 'Available' },
-  { regNo: 'TRK-02', model: 'Volvo FH16 Heavy', type: 'Truck', maxLoad: 12000, odometer: 87400, acquisitionCost: 145000, status: 'On Trip' },
-  { regNo: 'SDN-01', model: 'Toyota Camry hybrid', type: 'Sedan', maxLoad: 350, odometer: 32100, acquisitionCost: 28000, status: 'Available' },
-  { regNo: 'VAN-02', model: 'Mercedes Sprinter Cargo', type: 'Van', maxLoad: 800, odometer: 45200, acquisitionCost: 48000, status: 'In Shop' },
-  { regNo: 'TRK-01', model: 'Scania R500 Flatbed', type: 'Truck', maxLoad: 8000, odometer: 112000, acquisitionCost: 120000, status: 'Retired' }
+  { id: 1, registration_number: 'VAN-05', vehicle_name: 'Ford Transit 350', type: 'Van', max_load_capacity: 500, odometer: 12450, acquisition_cost: 35000, status: 'Available' },
+  { id: 2, registration_number: 'TRK-02', vehicle_name: 'Volvo FH16 Heavy', type: 'Truck', max_load_capacity: 12000, odometer: 87400, acquisition_cost: 145000, status: 'On Trip' },
+  { id: 3, registration_number: 'SDN-01', vehicle_name: 'Toyota Camry hybrid', type: 'Sedan', max_load_capacity: 350, odometer: 32100, acquisition_cost: 28000, status: 'Available' },
+  { id: 4, registration_number: 'VAN-02', vehicle_name: 'Mercedes Sprinter Cargo', type: 'Van', max_load_capacity: 800, odometer: 45200, acquisition_cost: 48000, status: 'In Shop' },
+  { id: 5, registration_number: 'TRK-01', vehicle_name: 'Scania R500 Flatbed', type: 'Truck', max_load_capacity: 8000, odometer: 112000, acquisition_cost: 120000, status: 'Retired' }
 ]);
 
 const newVehicle = reactive({
-  regNo: '',
-  model: '',
+  registration_number: '',
+  vehicle_name: '',
   type: 'Van',
-  maxLoad: 500,
+  max_load_capacity: 500,
   odometer: 0,
-  acquisitionCost: 20000,
+  acquisition_cost: 20000,
   status: 'Available'
 });
 
@@ -226,8 +226,8 @@ const toggleAccordion = (regNo) => {
 
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
-    const matchesSearch = v.regNo.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
-                          v.model.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchesSearch = v.registration_number.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                          v.vehicle_name.toLowerCase().includes(searchQuery.value.toLowerCase());
     const matchesType = filterType.value === 'All' || v.type === filterType.value;
     const matchesStatus = filterStatus.value === 'All' || v.status === filterStatus.value;
     return matchesSearch && matchesType && matchesStatus;
@@ -245,8 +245,8 @@ const saveVehicle = async () => {
   if (isSubmitting.value) return;
   
   // Clone state copies for tamper-resistant validations
-  const regNoCopy = String(newVehicle.regNo).trim();
-  const exists = vehicles.value.some(v => v.regNo.toLowerCase() === regNoCopy.toLowerCase());
+  const regNoCopy = String(newVehicle.registration_number).trim();
+  const exists = vehicles.value.some(v => v.registration_number.toLowerCase() === regNoCopy.toLowerCase());
   
   if (exists) {
     showToast('Validation Error: Registration Number must be unique.', 'error');
@@ -258,12 +258,13 @@ const saveVehicle = async () => {
   // Prevent duplicate submissions and trigger success toast
   setTimeout(() => {
     vehicles.value.push({
-      regNo: regNoCopy,
-      model: String(newVehicle.model).trim(),
+      id: vehicles.value.length + 1,
+      registration_number: regNoCopy,
+      vehicle_name: String(newVehicle.vehicle_name).trim(),
       type: newVehicle.type,
-      maxLoad: Number(newVehicle.maxLoad),
+      max_load_capacity: Number(newVehicle.max_load_capacity),
       odometer: Number(newVehicle.odometer),
-      acquisitionCost: Number(newVehicle.acquisitionCost),
+      acquisition_cost: Number(newVehicle.acquisition_cost),
       status: 'Available'
     });
     
@@ -272,16 +273,16 @@ const saveVehicle = async () => {
     isSubmitting.value = false;
 
     // Reset Form
-    newVehicle.regNo = '';
-    newVehicle.model = '';
-    newVehicle.maxLoad = 500;
+    newVehicle.registration_number = '';
+    newVehicle.vehicle_name = '';
+    newVehicle.max_load_capacity = 500;
     newVehicle.odometer = 0;
-    newVehicle.acquisitionCost = 20000;
+    newVehicle.acquisition_cost = 20000;
   }, 800);
 };
 
 const editVehicle = (vehicle) => {
-  showToast(`Edit record loaded for ${vehicle.regNo}`, 'info');
+  showToast(`Edit record loaded for ${vehicle.registration_number}`, 'info');
 };
 </script>
 

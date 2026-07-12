@@ -44,10 +44,10 @@
             </thead>
             <tbody>
               <tr v-for="log in fuelLogs" :key="log.id">
-                <td class="font-bold highlight-text">{{ log.vehicle }}</td>
+                <td class="font-bold highlight-text">{{ log.vehicle_id }}</td>
                 <td>{{ log.date }}</td>
                 <td class="font-bold">{{ log.liters }} L</td>
-                <td class="font-bold">${{ log.cost.toLocaleString() }}</td>
+                <td class="font-bold">${{ log.amount.toLocaleString() }}</td>
               </tr>
             </tbody>
           </table>
@@ -62,8 +62,8 @@
             :class="{ expanded: expandedFuelIds.includes(log.id) }"
           >
             <div class="accordion-header" @click="toggleFuelAccordion(log.id)">
-              <div class="vital-col font-bold text-white">{{ log.vehicle }}</div>
-              <div class="vital-col font-bold">${{ log.cost.toLocaleString() }}</div>
+              <div class="vital-col font-bold text-white">{{ log.vehicle_id }}</div>
+              <div class="vital-col font-bold">${{ log.amount.toLocaleString() }}</div>
               <div class="vital-col text-right pr-4">{{ log.liters }} L</div>
               <span class="chevron">&#9662;</span>
             </div>
@@ -89,27 +89,23 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Trip ID</th>
                 <th>Vehicle</th>
-                <th>Tolls ($)</th>
-                <th>Other ($)</th>
-                <th>Maint. Linked</th>
-                <th>Total ($)</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount ($)</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="exp in expenses" :key="exp.id">
-                <td class="font-mono highlight-text">#{{ exp.tripId }}</td>
-                <td class="font-bold">{{ exp.vehicle }}</td>
-                <td>${{ exp.tolls }}</td>
-                <td>${{ exp.other }}</td>
+                <td class="font-bold highlight-text">{{ exp.vehicle_id }}</td>
+                <td>{{ exp.date }}</td>
                 <td>
-                  <span class="maint-link" v-if="exp.maintId">
-                    Maint #{{ exp.maintId }}
+                  <span class="maint-link" v-if="exp.type === 'Maintenance'">
+                    {{ exp.type }}
                   </span>
-                  <span v-else class="text-muted">None</span>
+                  <span v-else>{{ exp.type }}</span>
                 </td>
-                <td class="font-bold highlight-text">${{ (exp.tolls + exp.other).toLocaleString() }}</td>
+                <td class="font-bold highlight-text">${{ exp.amount.toLocaleString() }}</td>
               </tr>
             </tbody>
           </table>
@@ -124,24 +120,15 @@
             :class="{ expanded: expandedExpIds.includes(exp.id) }"
           >
             <div class="accordion-header" @click="toggleExpAccordion(exp.id)">
-              <div class="vital-col font-mono font-bold text-white">#{{ exp.tripId }}</div>
-              <div class="vital-col font-bold">{{ exp.vehicle }}</div>
-              <div class="vital-col text-right pr-4 font-bold">${{ (exp.tolls + exp.other).toLocaleString() }}</div>
+              <div class="vital-col font-bold text-white">{{ exp.vehicle_id }}</div>
+              <div class="vital-col font-bold">{{ exp.type }}</div>
+              <div class="vital-col text-right pr-4 font-bold">${{ exp.amount.toLocaleString() }}</div>
               <span class="chevron">&#9662;</span>
             </div>
             <div class="accordion-content" v-if="expandedExpIds.includes(exp.id)">
               <div class="meta-row">
-                <span class="lbl">Tolls:</span>
-                <span class="val font-mono">${{ exp.tolls }}</span>
-              </div>
-              <div class="meta-row">
-                <span class="lbl">Other Costs:</span>
-                <span class="val font-mono">${{ exp.other }}</span>
-              </div>
-              <div class="meta-row">
-                <span class="lbl">Linked Maintenance:</span>
-                <span class="val" v-if="exp.maintId">Maint #{{ exp.maintId }}</span>
-                <span class="val text-muted" v-else>None</span>
+                <span class="lbl">Date:</span>
+                <span class="val font-mono">{{ exp.date }}</span>
               </div>
             </div>
           </div>
@@ -159,7 +146,7 @@
         <form @submit.prevent="saveFuelLog">
           <div class="form-group">
             <label>Vehicle</label>
-            <input type="text" v-model="newFuel.vehicle" placeholder="e.g. VAN-05" required />
+            <input type="text" v-model="newFuel.vehicle_id" placeholder="e.g. VAN-05" required />
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -168,7 +155,7 @@
             </div>
             <div class="form-group">
               <label>Cost ($)</label>
-              <input type="number" v-model.number="newFuel.cost" required />
+              <input type="number" v-model.number="newFuel.amount" required />
             </div>
           </div>
           <div class="form-group">
@@ -195,27 +182,26 @@
         <form @submit.prevent="saveExpense">
           <div class="form-row">
             <div class="form-group">
-              <label>Trip ID</label>
-              <input type="number" v-model.number="newExpense.tripId" required />
+              <label>Vehicle</label>
+              <input type="text" v-model="newExpense.vehicle_id" placeholder="e.g. TRK-02" required />
             </div>
             <div class="form-group">
-              <label>Vehicle</label>
-              <input type="text" v-model="newExpense.vehicle" placeholder="e.g. TRK-02" required />
+              <label>Type</label>
+              <select v-model="newExpense.type">
+                <option value="Toll">Toll</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Tolls ($)</label>
-              <input type="number" v-model.number="newExpense.tolls" required />
+              <label>Amount ($)</label>
+              <input type="number" v-model.number="newExpense.amount" required />
             </div>
             <div class="form-group">
-              <label>Other Costs ($)</label>
-              <input type="number" v-model.number="newExpense.other" required />
+              <label>Date</label>
+              <input type="date" v-model="newExpense.date" required />
             </div>
-          </div>
-          <div class="form-group">
-            <label>Linked Maintenance Log ID (Optional)</label>
-            <input type="number" v-model.number="newExpense.maintId" placeholder="e.g. 201" />
           </div>
           <div class="modal-actions">
             <button type="button" @click="showExpenseModal = false" class="btn-secondary">Cancel</button>
@@ -242,21 +228,21 @@ const expandedFuelIds = ref([]);
 const expandedExpIds = ref([]);
 
 const fuelLogs = ref([
-  { id: 1, vehicle: 'VAN-05', date: '2026-07-11', liters: 45, cost: 90 },
-  { id: 2, vehicle: 'TRK-02', date: '2026-07-10', liters: 210, cost: 420 },
-  { id: 3, vehicle: 'SDN-01', date: '2026-07-09', liters: 32, cost: 64 }
+  { id: 1, vehicle_id: 'VAN-05', date: '2026-07-11', liters: 45, amount: 90, type: 'Fuel' },
+  { id: 2, vehicle_id: 'TRK-02', date: '2026-07-10', liters: 210, amount: 420, type: 'Fuel' },
+  { id: 3, vehicle_id: 'SDN-01', date: '2026-07-09', liters: 32, amount: 64, type: 'Fuel' }
 ]);
 
 const expenses = ref([
-  { id: 1, tripId: 1045, vehicle: 'VAN-05', tolls: 15, other: 5, maintId: null },
-  { id: 2, tripId: 1044, vehicle: 'TRK-02', tolls: 85, other: 24, maintId: null },
-  { id: 3, tripId: 1043, vehicle: 'VAN-02', tolls: 0, other: 0, maintId: 201 }
+  { id: 1, vehicle_id: 'VAN-05', amount: 15, date: '2026-07-11', type: 'Toll' },
+  { id: 2, vehicle_id: 'TRK-02', amount: 85, date: '2026-07-10', type: 'Toll' },
+  { id: 3, vehicle_id: 'VAN-02', amount: 450, date: '2026-07-10', type: 'Maintenance' }
 ]);
 
 const simulatedMaintenanceCost = 600;
 
 const totalOperationalCost = computed(() => {
-  const fuelTotal = fuelLogs.value.reduce((acc, log) => acc + log.cost, 0);
+  const fuelTotal = fuelLogs.value.reduce((acc, log) => acc + log.amount, 0);
   return fuelTotal + simulatedMaintenanceCost;
 });
 
@@ -277,32 +263,32 @@ const toggleExpAccordion = (id) => {
 };
 
 const newFuel = reactive({
-  vehicle: '',
+  vehicle_id: '',
   liters: 0,
-  cost: 0,
-  date: new Date().toISOString().split('T')[0]
+  amount: 0,
+  date: new Date().toISOString().split('T')[0],
+  type: 'Fuel'
 });
 
 const newExpense = reactive({
-  tripId: 0,
-  vehicle: '',
-  tolls: 0,
-  other: 0,
-  maintId: null
+  vehicle_id: '',
+  type: 'Toll',
+  amount: 0,
+  date: new Date().toISOString().split('T')[0]
 });
 
 const saveFuelLog = async () => {
   if (isSubmitting.value) return;
 
-  const vehicleId = String(newFuel.vehicle).trim();
+  const vehicleId = String(newFuel.vehicle_id).trim();
   const liters = Number(newFuel.liters);
-  const cost = Number(newFuel.cost);
+  const amount = Number(newFuel.amount);
 
   if (!vehicleId) {
     showToast('Validation Error: Vehicle identifier is required.', 'error');
     return;
   }
-  if (liters <= 0 || cost <= 0) {
+  if (liters <= 0 || amount <= 0) {
     showToast('Validation Error: Liters and Cost must be positive values.', 'error');
     return;
   }
@@ -312,35 +298,34 @@ const saveFuelLog = async () => {
   setTimeout(() => {
     fuelLogs.value.unshift({
       id: fuelLogs.value.length + 1,
-      vehicle: vehicleId,
+      vehicle_id: vehicleId,
       liters,
-      cost,
-      date: newFuel.date
+      amount,
+      date: newFuel.date,
+      type: 'Fuel'
     });
 
     showToast(`Fuel log for ${vehicleId} posted successfully!`, 'success');
     showFuelModal.value = false;
     isSubmitting.value = false;
 
-    newFuel.vehicle = '';
+    newFuel.vehicle_id = '';
     newFuel.liters = 0;
-    newFuel.cost = 0;
+    newFuel.amount = 0;
   }, 600);
 };
 
 const saveExpense = async () => {
   if (isSubmitting.value) return;
 
-  const tripId = Number(newExpense.tripId);
-  const vehicleId = String(newExpense.vehicle).trim();
-  const tolls = Number(newExpense.tolls);
-  const other = Number(newExpense.other);
+  const vehicleId = String(newExpense.vehicle_id).trim();
+  const amount = Number(newExpense.amount);
 
-  if (!vehicleId || tripId <= 0) {
-    showToast('Validation Error: Trip ID and Vehicle are required.', 'error');
+  if (!vehicleId) {
+    showToast('Validation Error: Vehicle is required.', 'error');
     return;
   }
-  if (tolls < 0 || other < 0) {
+  if (amount < 0) {
     showToast('Validation Error: Cost values cannot be negative.', 'error');
     return;
   }
@@ -350,22 +335,18 @@ const saveExpense = async () => {
   setTimeout(() => {
     expenses.value.unshift({
       id: expenses.value.length + 1,
-      tripId,
-      vehicle: vehicleId,
-      tolls,
-      other,
-      maintId: newExpense.maintId || null
+      vehicle_id: vehicleId,
+      amount,
+      type: newExpense.type,
+      date: newExpense.date
     });
 
-    showToast(`Expense for Trip #${tripId} posted successfully!`, 'success');
+    showToast(`Expense posted successfully!`, 'success');
     showExpenseModal.value = false;
     isSubmitting.value = false;
 
-    newExpense.tripId = 0;
-    newExpense.vehicle = '';
-    newExpense.tolls = 0;
-    newExpense.other = 0;
-    newExpense.maintId = null;
+    newExpense.vehicle_id = '';
+    newExpense.amount = 0;
   }, 600);
 };
 </script>
