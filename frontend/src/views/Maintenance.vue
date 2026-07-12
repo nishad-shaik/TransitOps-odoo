@@ -248,7 +248,18 @@ const saveMaintenanceLog = async () => {
 };
 
 const closeLog = async (log) => {
-  showToast('Simulated: Close log record action triggered.', 'info');
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
+  try {
+    await client.patch(`/maintenance/${log.id}`, { status: 'Closed' });
+    showToast(`Maintenance log #${log.id} closed and vehicle released.`, 'success');
+    await fetchLogs();
+    await fetchVehicles();
+  } catch (err) {
+    showToast(err.message || 'Failed to close maintenance log.', 'error');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>
 

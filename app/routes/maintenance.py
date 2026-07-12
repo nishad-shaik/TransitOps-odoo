@@ -68,3 +68,33 @@ def log_service():
         "date": str(m.start_date),
         "status": m.status.value
     }), 201
+
+@maintenance_bp.route('/<int:log_id>', methods=['PATCH'])
+@token_required
+def close_maintenance_log(log_id):
+    data = request.get_json() or {}
+    new_status = data.get('status')
+    
+    if not new_status or new_status != 'Closed':
+        return jsonify({"error": {"code": "BAD_REQUEST", "message": "Only status 'Closed' is acceptable for this action"}}), 400
+        
+    session = SessionLocal()
+    log = session.query(Maintenance).filter_by(id=log_id).first()
+    if not log:
+        return jsonify({"error": {"code": "NOT_FOUND", "message": "Maintenance log not found"}}), 404
+        
+    log.status = MaintenanceStatus.closed
+    log.end_date = datetime.utcnow().date()
+    
+    vehicle = session.query(Vehicle).filter_by(id=log.vehicle_id).first()
+    if vehicle and vehicle.status == VehicleStatus.maintenance:
+        vehicle.status = VehicleStatus.available
+        
+    session.commit()
+    
+    return jsonify({
+        "id": log.id,
+        "status": log.status.value,
+        "vehicle_id": vehicle.plate_number if vehicle else None
+    }), 200
+
