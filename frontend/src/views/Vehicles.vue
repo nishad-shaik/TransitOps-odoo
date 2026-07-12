@@ -13,14 +13,14 @@
 
     <!-- Compliance Banner -->
     <div class="info-banner">
-      <span class="info-icon">ℹ</span>
+      <Info class="info-icon-svg" />
       <p><strong>Business Rules:</strong> Registration No. must be unique. Retired or In Shop vehicles are automatically filtered out from the Trip Dispatch dispatcher pool.</p>
     </div>
 
     <!-- Table Action Controls -->
     <div class="table-actions">
       <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <Search class="search-icon-svg" />
         <input
           type="text"
           v-model="searchQuery"
@@ -187,7 +187,9 @@
 
 <script setup>
 import { ref, computed, reactive } from 'vue';
+import { Info, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
+
 
 const { showToast } = useToast();
 

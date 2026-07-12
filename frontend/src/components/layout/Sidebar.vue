@@ -1,7 +1,7 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <span class="brand-icon">🔮</span>
+      <Truck class="brand-icon-svg" />
       <h2>TransitOps</h2>
     </div>
     
@@ -18,7 +18,7 @@
         class="nav-link"
         active-class="active"
       >
-        <span class="nav-icon">{{ link.icon }}</span>
+        <component :is="link.icon" class="nav-icon-svg" />
         <span class="nav-text">{{ link.label }}</span>
       </router-link>
     </nav>
@@ -27,6 +27,16 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { 
+  LayoutDashboard, 
+  Truck, 
+  Users, 
+  Compass, 
+  Wrench, 
+  CreditCard, 
+  BarChart3, 
+  Settings 
+} from '@lucide/vue';
 
 const userRole = ref('Fleet Manager');
 const userEmail = ref('manager@transitops.dev');
@@ -38,14 +48,14 @@ onMounted(() => {
 });
 
 const allLinks = [
-  { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst', 'Driver', 'Developer'] },
-  { path: '/vehicles', label: 'Fleet Registry', icon: '🚚', roles: ['Fleet Manager', 'Dispatcher', 'Financial Analyst', 'Developer'] },
-  { path: '/drivers', label: 'Drivers & Safety', icon: '👤', roles: ['Fleet Manager', 'Safety Officer', 'Developer'] },
-  { path: '/trips', label: 'Trip Dispatcher', icon: '🗺️', roles: ['Dispatcher', 'Safety Officer', 'Driver', 'Developer'] },
-  { path: '/maintenance', label: 'Maintenance Log', icon: '🔧', roles: ['Fleet Manager', 'Developer'] },
-  { path: '/fuel-expenses', label: 'Fuel & Expenses', icon: '💳', roles: ['Financial Analyst', 'Developer'] },
-  { path: '/analytics', label: 'Reports & ROI', icon: '📈', roles: ['Fleet Manager', 'Financial Analyst', 'Developer'] },
-  { path: '/settings', label: 'Settings', icon: '⚙️', roles: ['Fleet Manager', 'Developer'] }
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst', 'Driver', 'Developer'] },
+  { path: '/vehicles', label: 'Fleet Registry', icon: Truck, roles: ['Fleet Manager', 'Dispatcher', 'Financial Analyst', 'Developer'] },
+  { path: '/drivers', label: 'Drivers & Safety', icon: Users, roles: ['Fleet Manager', 'Safety Officer', 'Developer'] },
+  { path: '/trips', label: 'Trip Dispatcher', icon: Compass, roles: ['Dispatcher', 'Safety Officer', 'Driver', 'Developer'] },
+  { path: '/maintenance', label: 'Maintenance Log', icon: Wrench, roles: ['Fleet Manager', 'Developer'] },
+  { path: '/fuel-expenses', label: 'Fuel & Expenses', icon: CreditCard, roles: ['Financial Analyst', 'Developer'] },
+  { path: '/analytics', label: 'Reports & ROI', icon: BarChart3, roles: ['Fleet Manager', 'Financial Analyst', 'Developer'] },
+  { path: '/settings', label: 'Settings', icon: Settings, roles: ['Fleet Manager', 'Developer'] }
 ];
 
 const allowedLinks = computed(() => {
@@ -72,12 +82,14 @@ const allowedLinks = computed(() => {
   padding: 1.5rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   border-bottom: 1px solid var(--border-color);
 }
 
-.brand-icon {
-  font-size: 1.4rem;
+.brand-icon-svg {
+  width: 24px;
+  height: 24px;
+  color: var(--primary);
 }
 
 .sidebar-brand h2 {
@@ -104,7 +116,7 @@ const allowedLinks = computed(() => {
   text-transform: uppercase;
   background-color: var(--primary-glow);
   color: var(--primary);
-  border: 1px solid rgba(170, 59, 255, 0.25);
+  border: 1px solid rgba(245, 166, 35, 0.25);
   padding: 0.2rem 0.5rem;
   border-radius: var(--border-radius-sm);
   align-self: flex-start;
@@ -144,12 +156,13 @@ const allowedLinks = computed(() => {
 }
 
 .nav-link.active {
-  color: white;
-  background: linear-gradient(135deg, var(--primary) 0%, hsl(var(--primary-h), var(--primary-s), 55%) 100%);
+  color: #15181D;
+  background: var(--primary);
   box-shadow: var(--shadow-primary);
 }
 
-.nav-icon {
-  font-size: 1.15rem;
+.nav-icon-svg {
+  width: 18px;
+  height: 18px;
 }
 </style>

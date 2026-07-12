@@ -13,14 +13,14 @@
 
     <!-- Compliance Banner -->
     <div class="info-banner warning-style">
-      <span class="info-icon">⚠️</span>
+      <AlertTriangle class="info-icon-svg" />
       <p><strong>Compliance Rule:</strong> Drivers with an expired license or Suspended status are automatically blocked from trip assignments in the dispatcher.</p>
     </div>
 
     <!-- Search & Filter Controls -->
     <div class="table-actions">
       <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <Search class="search-icon-svg" />
         <input
           type="text"
           v-model="searchQuery"
@@ -220,7 +220,9 @@
 
 <script setup>
 import { ref, computed, reactive } from 'vue';
+import { AlertTriangle, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
+
 
 const { showToast } = useToast();
 

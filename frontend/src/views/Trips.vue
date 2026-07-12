@@ -82,7 +82,7 @@
 
         <!-- Live Business Validation Warning -->
         <div v-if="validationError" class="validation-warning">
-          <span class="warning-icon">⚠️</span>
+          <AlertTriangle class="warning-icon-svg" />
           <span>{{ validationError }}</span>
         </div>
 
@@ -252,7 +252,7 @@
         </div>
         
         <div class="confirm-content" v-if="selectedVehicle && selectedDriver">
-          <p class="confirm-alert-text">⚠️ Are you sure you want to dispatch this vehicle? Action will update driver and vehicle schedules to "On Trip".</p>
+          <p class="confirm-alert-text"><AlertTriangle class="confirm-alert-icon-svg inline-block text-warning mr-2" /> Are you sure you want to dispatch this vehicle? Action will update driver and vehicle schedules to "On Trip".</p>
           
           <div class="summary-card">
             <div class="summary-item">
@@ -287,7 +287,9 @@
 
 <script setup>
 import { ref, computed, reactive } from 'vue';
+import { AlertTriangle } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
+
 
 const { showToast } = useToast();
 

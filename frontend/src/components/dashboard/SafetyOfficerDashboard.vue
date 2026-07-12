@@ -10,7 +10,7 @@
     <!-- Actionable Alert Anomaly Banner (Dynamic filtration) -->
     <div class="anomaly-banner" v-if="flaggedDrivers.length > 0">
       <div class="banner-header">
-        <span class="alert-pulse">🚨</span>
+        <ShieldAlert class="alert-pulse brand-icon-svg inline-block" />
         <h3>Actionable Alert Anomaly Banner</h3>
         <span class="anomaly-count">{{ flaggedDrivers.length }} Flags Detected</span>
       </div>
@@ -34,7 +34,7 @@
     <div class="kpi-grid">
       <div class="kpi-card" @click="handleSafetyKpiClick('All')">
         <div class="kpi-header">
-          <span class="kpi-icon">👥</span>
+          <Users class="kpi-icon-svg" />
           <span class="kpi-label">Total Drivers</span>
         </div>
         <div class="kpi-body">
@@ -46,7 +46,7 @@
       
       <div class="kpi-card" @click="handleSafetyKpiClick('Red')">
         <div class="kpi-header">
-          <span class="kpi-icon">❌</span>
+          <XCircle class="kpi-icon-svg text-danger" />
           <span class="kpi-label">Expired/Suspended</span>
         </div>
         <div class="kpi-body">
@@ -58,7 +58,7 @@
 
       <div class="kpi-card" @click="handleSafetyKpiClick('Orange')">
         <div class="kpi-header">
-          <span class="kpi-icon">⚠️</span>
+          <AlertTriangle class="kpi-icon-svg text-warning" />
           <span class="kpi-label">Expiring Soon/Risk</span>
         </div>
         <div class="kpi-body">
@@ -68,6 +68,7 @@
         <div class="kpi-border-orange"></div>
       </div>
     </div>
+
 
     <!-- Virtualized Historical Driver Logs Table -->
     <div class="card logs-card">
@@ -118,7 +119,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { ShieldAlert, Users, XCircle, AlertTriangle } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
+
 
 const { showToast } = useToast();
 

@@ -60,7 +60,7 @@
           <div class="form-group">
             <label for="email">Email Address</label>
             <div class="input-wrapper">
-              <span class="input-icon">✉</span>
+              <Mail class="input-icon-svg" />
               <input
                 type="email"
                 id="email"
@@ -74,7 +74,7 @@
           <div class="form-group">
             <label for="password">Password</label>
             <div class="input-wrapper">
-              <span class="input-icon">🔑</span>
+              <Key class="input-icon-svg" />
               <input
                 type="password"
                 id="password"
@@ -96,7 +96,7 @@
           </div>
 
           <div v-if="errorMessage" class="error-message">
-            <span class="err-icon">⚠️</span>
+            <AlertTriangle class="err-icon-svg text-danger" />
             <span class="err-text">{{ errorMessage }}</span>
           </div>
 
@@ -111,7 +111,7 @@
           <div class="form-group">
             <label for="reg-email">Email Address</label>
             <div class="input-wrapper">
-              <span class="input-icon">✉</span>
+              <Mail class="input-icon-svg" />
               <input
                 type="email"
                 id="reg-email"
@@ -125,7 +125,7 @@
           <div class="form-group">
             <label for="reg-password">Password</label>
             <div class="input-wrapper">
-              <span class="input-icon">🔑</span>
+              <Key class="input-icon-svg" />
               <input
                 type="password"
                 id="reg-password"
@@ -139,7 +139,7 @@
           <div class="form-group">
             <label for="reg-confirm">Confirm Password</label>
             <div class="input-wrapper">
-              <span class="input-icon">🔒</span>
+              <Lock class="input-icon-svg" />
               <input
                 type="password"
                 id="reg-confirm"
@@ -153,7 +153,7 @@
           <div class="form-group">
             <label for="reg-role">Role Permission Level</label>
             <div class="input-wrapper">
-              <span class="input-icon">🛡️</span>
+              <Shield class="input-icon-svg" />
               <select id="reg-role" v-model="regRole">
                 <option value="Fleet Manager">Fleet Manager</option>
                 <option value="Dispatcher">Dispatcher</option>
@@ -165,7 +165,7 @@
           </div>
 
           <div v-if="regErrorMessage" class="error-message">
-            <span class="err-icon">⚠️</span>
+            <AlertTriangle class="err-icon-svg text-danger" />
             <span class="err-text">{{ regErrorMessage }}</span>
           </div>
 
@@ -182,7 +182,9 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { Mail, Key, Lock, Shield, AlertTriangle } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
+
 
 const router = useRouter();
 const { showToast } = useToast();

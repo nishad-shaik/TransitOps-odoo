@@ -50,44 +50,44 @@
             </div>
           </div>
 
-          <!-- Stepper Actions Context -->
-          <div class="workflow-actions">
-            <!-- Step 1: Draft -> Dispatch -->
-            <div v-if="activeTrip.status === 'Draft'" class="action-block">
-              <p>Verify cargo loading limits and click to declare departure.</p>
-              <button @click="startTrip" class="btn-primary" :disabled="isSubmitting">
-                🚀 Start Departure
-              </button>
-            </div>
-
-            <!-- Step 2: Dispatched -> Complete -->
-            <div v-else-if="activeTrip.status === 'Dispatched'" class="action-block">
-              <p class="warning-text">Enter trip closing values to complete this dispatch.</p>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Actual Distance Traveled (km)</label>
-                  <input type="number" v-model.number="completionData.actualDistance" required />
-                </div>
-                <div class="form-group">
-                  <label>Logged Fuel Cost ($)</label>
-                  <input type="number" v-model.number="completionData.fuelCost" required />
-                </div>
+            <!-- Stepper Actions Context -->
+            <div class="workflow-actions">
+              <!-- Step 1: Draft -> Dispatch -->
+              <div v-if="activeTrip.status === 'Draft'" class="action-block">
+                <p>Verify cargo loading limits and click to declare departure.</p>
+                <button @click="startTrip" class="btn-primary" :disabled="isSubmitting">
+                  <Compass class="btn-icon-svg" /> Start Departure
+                </button>
               </div>
-              <button @click="finishTrip" class="btn-primary" :disabled="!completionData.actualDistance || !completionData.fuelCost || isSubmitting">
-                ✅ Complete Trip
-              </button>
+
+              <!-- Step 2: Dispatched -> Complete -->
+              <div v-else-if="activeTrip.status === 'Dispatched'" class="action-block">
+                <p class="warning-text">Enter trip closing values to complete this dispatch.</p>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Actual Distance Traveled (km)</label>
+                    <input type="number" v-model.number="completionData.actualDistance" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Logged Fuel Cost ($)</label>
+                    <input type="number" v-model.number="completionData.fuelCost" required />
+                  </div>
+                </div>
+                <button @click="finishTrip" class="btn-primary" :disabled="!completionData.actualDistance || !completionData.fuelCost || isSubmitting">
+                  <Check class="btn-icon-svg" /> Complete Trip
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- No active dispatches placeholder -->
-      <div v-else class="empty-dispatcher">
-        <span class="dispatcher-icon">🌟</span>
-        <h4>No Active Dispatches</h4>
-        <p>You have completed all assigned routes. Awaiting dispatcher scheduling.</p>
+        <!-- No active dispatches placeholder -->
+        <div v-else class="empty-dispatcher">
+          <Compass class="dispatcher-icon-svg text-primary" />
+          <h4>No Active Dispatches</h4>
+          <p>You have completed all assigned routes. Awaiting dispatcher scheduling.</p>
+        </div>
       </div>
-    </div>
 
     <!-- Historical Trips Card -->
     <div class="card">
@@ -126,7 +126,9 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue';
+import { Compass, Check } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
+
 
 const { showToast } = useToast();
 const isSubmitting = ref(false);
@@ -345,10 +347,11 @@ const finishTrip = () => {
   padding: 3rem 1.5rem;
 }
 
-.dispatcher-icon {
-  font-size: 3rem;
+.dispatcher-icon-svg {
+  width: 48px;
+  height: 48px;
   display: block;
-  margin-bottom: 1rem;
+  margin: 0 auto 1rem auto;
 }
 
 .empty-dispatcher h4 {

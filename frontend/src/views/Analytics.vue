@@ -7,7 +7,8 @@
         <p class="subtitle">Vehicle performance, ROI analysis, and CSV export portal</p>
       </div>
       <button @click="downloadCSV" class="btn-primary flex-btn">
-        <span>📥 Export Grid to CSV</span>
+        <Download class="btn-icon-svg" />
+        <span>Export Grid to CSV</span>
       </button>
     </div>
 
@@ -16,7 +17,7 @@
       <!-- Operational Costs -->
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-icon">💳</span>
+          <CreditCard class="kpi-icon-svg text-primary" />
           <span class="kpi-label">Fleet Operational Costs</span>
         </div>
         <div class="kpi-body">
@@ -29,7 +30,7 @@
       <!-- Fuel Efficiency Summary -->
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-icon">⚡</span>
+          <Zap class="kpi-icon-svg text-primary" />
           <span class="kpi-label">Avg Fuel Efficiency</span>
         </div>
         <div class="kpi-body">
@@ -42,12 +43,28 @@
       <!-- Average ROI Card -->
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-icon">📈</span>
+          <BarChart3 class="kpi-icon-svg text-primary" />
           <span class="kpi-label">Fleet Average ROI</span>
         </div>
-        <div class="kpi-body">
-          <span class="kpi-value">{{ averageRoi }}%</span>
-          <span class="kpi-subtext">Formula: (Rev - (Maint + Fuel)) / Acq</span>
+        <div class="kpi-body-wrapper">
+          <div class="kpi-body">
+            <span class="kpi-value">{{ averageRoi }}%</span>
+            <span class="kpi-subtext">Formula: (Rev - (Maint + Fuel)) / Acq</span>
+          </div>
+          <!-- Signature Radial Gauge for Average ROI % -->
+          <div class="kpi-gauge-wrapper">
+            <svg class="radial-gauge" viewBox="0 0 36 36">
+              <path
+                class="gauge-bg"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                class="gauge-fill"
+                stroke-dasharray="21, 100"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+          </div>
         </div>
         <div class="kpi-border"></div>
       </div>
@@ -56,7 +73,7 @@
     <!-- Filters Control Panel -->
     <div class="card filters-card">
       <div class="search-bar-wrapper">
-        <span class="search-icon">🔍</span>
+        <Search class="search-icon-svg" />
         <input 
           type="text" 
           v-model="searchQuery" 
@@ -167,7 +184,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { Download, CreditCard, Zap, BarChart3, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
+
 
 const { showToast } = useToast();
 

@@ -13,7 +13,7 @@
 
     <!-- Rule Banner -->
     <div class="info-banner">
-      <span class="info-icon">🔧</span>
+      <Wrench class="info-icon-svg" />
       <p><strong>Status Transition Rule:</strong> Registering an active maintenance record automatically flips the vehicle to <strong>In Shop</strong> (removed from the dispatch pool). Closing the record returns the vehicle to <strong>Available</strong>.</p>
     </div>
 
@@ -162,7 +162,9 @@
 
 <script setup>
 import { ref, reactive } from 'vue';
+import { Wrench } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
+
 
 const { showToast } = useToast();
 

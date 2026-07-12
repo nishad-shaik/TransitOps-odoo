@@ -1,7 +1,7 @@
 <template>
   <Transition name="toast-fade">
     <div v-if="toastVisible" class="toast-wrapper" :class="toastType">
-      <span class="toast-icon">{{ icon }}</span>
+      <component :is="icon" class="toast-icon-svg" />
       <span class="toast-msg">{{ toastMessage }}</span>
       <button @click="toastVisible = false" class="toast-close">&times;</button>
     </div>
@@ -10,15 +10,16 @@
 
 <script setup>
 import { computed } from 'vue';
+import { CheckCircle2, XCircle, AlertTriangle, Info } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
 
 const { toastMessage, toastType, toastVisible } = useToast();
 
 const icon = computed(() => {
-  if (toastType.value === 'success') return '✅';
-  if (toastType.value === 'error') return '❌';
-  if (toastType.value === 'warning') return '⚠️';
-  return 'ℹ️';
+  if (toastType.value === 'success') return CheckCircle2;
+  if (toastType.value === 'error') return XCircle;
+  if (toastType.value === 'warning') return AlertTriangle;
+  return Info;
 });
 </script>
 
@@ -42,34 +43,40 @@ const icon = computed(() => {
   max-width: 450px;
 }
 
+.toast-icon-svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 /* Colors matching semantic variables */
 .toast-wrapper.success {
-  background-color: #111827;
-  border-color: rgba(16, 185, 129, 0.4);
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+  background-color: var(--panel-bg);
+  border-color: rgba(76, 154, 106, 0.4);
+  box-shadow: 0 4px 20px rgba(76, 154, 106, 0.15);
 }
-.toast-wrapper.success .toast-icon { color: var(--success); }
+.toast-wrapper.success .toast-icon-svg { color: var(--success); }
 
 .toast-wrapper.error {
-  background-color: #111827;
-  border-color: rgba(239, 68, 68, 0.4);
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15);
+  background-color: var(--panel-bg);
+  border-color: rgba(209, 67, 67, 0.4);
+  box-shadow: 0 4px 20px rgba(209, 67, 67, 0.15);
 }
-.toast-wrapper.error .toast-icon { color: var(--danger); }
+.toast-wrapper.error .toast-icon-svg { color: var(--danger); }
 
 .toast-wrapper.warning {
-  background-color: #111827;
-  border-color: rgba(245, 158, 11, 0.4);
-  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+  background-color: var(--panel-bg);
+  border-color: rgba(245, 166, 35, 0.4);
+  box-shadow: 0 4px 20px rgba(245, 166, 35, 0.15);
 }
-.toast-wrapper.warning .toast-icon { color: var(--warning); }
+.toast-wrapper.warning .toast-icon-svg { color: var(--warning); }
 
 .toast-wrapper.info {
-  background-color: #111827;
-  border-color: rgba(59, 130, 246, 0.4);
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+  background-color: var(--panel-bg);
+  border-color: rgba(59, 130, 196, 0.4);
+  box-shadow: 0 4px 20px rgba(59, 130, 196, 0.15);
 }
-.toast-wrapper.info .toast-icon { color: var(--info); }
+.toast-wrapper.info .toast-icon-svg { color: var(--info); }
 
 .toast-msg {
   flex: 1;

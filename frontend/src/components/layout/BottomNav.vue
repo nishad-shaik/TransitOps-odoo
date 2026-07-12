@@ -7,18 +7,20 @@
       class="nav-item"
       active-class="active"
     >
-      <span class="nav-icon">{{ link.icon }}</span>
+      <component :is="link.icon" class="nav-icon-svg" />
       <span class="nav-label">{{ link.label }}</span>
     </router-link>
   </nav>
 </template>
 
 <script setup>
+import { LayoutDashboard, Compass, Wrench, CreditCard } from '@lucide/vue';
+
 const allLinks = [
-  { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { path: '/trips', label: 'Trips', icon: '🗺️' },
-  { path: '/maintenance', label: 'Maintenance', icon: '🔧' },
-  { path: '/fuel-expenses', label: 'Fuel & Exp', icon: '💳' }
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/trips', label: 'Trips', icon: Compass },
+  { path: '/maintenance', label: 'Maintenance', icon: Wrench },
+  { path: '/fuel-expenses', label: 'Fuel & Exp', icon: CreditCard }
 ];
 </script>
 
@@ -28,7 +30,7 @@ const allLinks = [
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px; /* Over 48px height target optimized for touch */
+  height: 65px;
   background-color: var(--panel-bg);
   border-top: 1px solid var(--border-color);
   display: flex;
@@ -48,14 +50,15 @@ const allLinks = [
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.5rem 1rem;
-  min-height: 48px; /* Thumb-friendly tap zones (minimum 48px height) */
+  min-height: 48px;
   transition: all 0.2s ease;
   flex: 1;
 }
 
-.nav-icon {
-  font-size: 1.25rem;
-  margin-bottom: 0.15rem;
+.nav-icon-svg {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 0.25rem;
 }
 
 .nav-item:hover {
@@ -64,6 +67,6 @@ const allLinks = [
 
 .nav-item.active {
   color: var(--primary);
-  background-color: rgba(170, 59, 255, 0.03);
+  background-color: rgba(245, 166, 35, 0.03);
 }
 </style>

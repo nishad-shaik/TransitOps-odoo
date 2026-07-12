@@ -30,12 +30,28 @@
         @click="handleKpiClick(kpi.title)"
       >
         <div class="kpi-header">
-          <span class="kpi-icon">{{ kpi.icon }}</span>
+          <component :is="kpi.icon" class="kpi-icon-svg text-primary" />
           <span class="kpi-label">{{ kpi.title }}</span>
         </div>
-        <div class="kpi-body">
-          <span class="kpi-value">{{ kpi.value }}</span>
-          <span class="kpi-subtext">{{ kpi.subtext }}</span>
+        <div class="kpi-body-wrapper">
+          <div class="kpi-body">
+            <span class="kpi-value">{{ kpi.value }}</span>
+            <span class="kpi-subtext">{{ kpi.subtext }}</span>
+          </div>
+          <!-- Signature Radial Gauge for Fleet Utilization % -->
+          <div class="kpi-gauge-wrapper" v-if="kpi.value.includes('%')">
+            <svg class="radial-gauge" viewBox="0 0 36 36">
+              <path
+                class="gauge-bg"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                class="gauge-fill"
+                stroke-dasharray="75, 100"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+          </div>
         </div>
         <div class="kpi-border"></div>
       </div>
@@ -111,6 +127,7 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue';
+import { Compass, Hourglass, BarChart3 } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
 
 const { showToast } = useToast();
@@ -123,9 +140,9 @@ const filters = reactive({
 const activeKpiFilter = ref('All');
 
 const kpis = ref([
-  { title: 'Active Trips', value: '8', subtext: 'On road. Click to filter.', icon: '🗺️' },
-  { title: 'Pending Trips', value: '2', subtext: 'Awaiting dispatch. Click to filter.', icon: '⏳' },
-  { title: 'Fleet Utilization', value: '75%', subtext: 'Click to reset filter', icon: '📈' }
+  { title: 'Active Trips', value: '8', subtext: 'On road. Click to filter.', icon: Compass },
+  { title: 'Pending Trips', value: '2', subtext: 'Awaiting dispatch. Click to filter.', icon: Hourglass },
+  { title: 'Fleet Utilization', value: '75%', subtext: 'Click to reset filter', icon: BarChart3 }
 ]);
 
 const handleKpiClick = (title) => {
@@ -140,6 +157,7 @@ const handleKpiClick = (title) => {
     showToast('KPI Filter Reset: Showing all logs', 'info');
   }
 };
+
 
 const recentTrips = ref([
   { id: 1045, vehicle_id: 'VAN-05', driver_id: 'Alex Johnson', cargo_weight: 450, status: 'Dispatched', type: 'Van' },
