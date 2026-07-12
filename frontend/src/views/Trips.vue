@@ -14,7 +14,7 @@
     <!-- Dispatch Creation Form -->
     <div v-if="showCreateForm" class="card form-card">
       <h3>Create Dispatch Record</h3>
-      <form @submit.prevent="dispatchTrip">
+      <form @submit.prevent="openConfirmationModal">
         <div class="form-row">
           <div class="form-group">
             <label>Source Location</label>
@@ -47,6 +47,7 @@
           </div>
         </div>
 
+        <!-- Cargo weight with visual progressive validation bar -->
         <div class="form-row">
           <div class="form-group">
             <label>Cargo Weight (kg)</label>
@@ -56,7 +57,23 @@
               @input="checkCapacity"
               required
             />
+            
+            <!-- Progressive Validation Bar -->
+            <div class="capacity-tracker" v-if="selectedVehicle">
+              <div class="progress-bar-wrapper">
+                <div 
+                  class="progress-fill" 
+                  :style="{ width: Math.min(capacityPercentage, 100) + '%' }" 
+                  :class="{ 'over-capacity': capacityPercentage > 100 }"
+                ></div>
+              </div>
+              <div class="progress-metrics" :class="{ 'danger-text': capacityPercentage > 100 }">
+                <span>{{ Math.round(capacityPercentage) }}% Capacity Utilized</span>
+                <span>{{ newTrip.cargoWeight }} / {{ selectedVehicle.maxLoad }} kg</span>
+              </div>
+            </div>
           </div>
+
           <div class="form-group">
             <label>Planned Distance (km)</label>
             <input type="number" v-model.number="newTrip.plannedDistance" required />
@@ -141,13 +158,55 @@
         </div>
       </div>
     </div>
+
+    <!-- Two-Step Dispatch Confirmation Modal -->
+    <div v-if="showConfirmModal" class="modal-overlay" @click.self="showConfirmModal = false">
+      <div class="modal confirm-modal">
+        <div class="modal-header">
+          <h3>Confirm Fleet Dispatch</h3>
+          <button @click="showConfirmModal = false" class="close-btn">&times;</button>
+        </div>
+        
+        <div class="confirm-content" v-if="selectedVehicle && selectedDriver">
+          <p class="confirm-alert-text">⚠️ Are you sure you want to dispatch this vehicle? Action will update driver and vehicle schedules to "On Trip".</p>
+          
+          <div class="summary-card">
+            <div class="summary-item">
+              <span class="lbl">Route:</span>
+              <span class="val font-bold">{{ newTrip.source }} &rarr; {{ newTrip.destination }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="lbl">Vehicle assigned:</span>
+              <span class="val font-bold text-accent">{{ selectedVehicle.regNo }} ({{ selectedVehicle.model }})</span>
+            </div>
+            <div class="summary-item">
+              <span class="lbl">Driver assigned:</span>
+              <span class="val font-bold text-accent">{{ selectedDriver.name }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="lbl">Cargo Load:</span>
+              <span class="val font-bold">{{ newTrip.cargoWeight }} kg</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button @click="showConfirmModal = false" class="btn-secondary">Cancel</button>
+          <button @click="dispatchTrip" class="btn-primary">Confirm &amp; Dispatch</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, reactive } from 'vue';
+import { useToast } from '../composables/useToast';
+
+const { showToast } = useToast();
 
 const showCreateForm = ref(false);
+const showConfirmModal = ref(false);
 const selectedVehicleIndex = ref(-1);
 const selectedDriverIndex = ref(-1);
 const validationError = ref('');
@@ -179,31 +238,46 @@ const getTripsByStatus = (status) => {
   return trips.value.filter(t => t.status === status);
 };
 
+const selectedVehicle = computed(() => {
+  const idx = parseInt(selectedVehicleIndex.value);
+  return idx >= 0 ? availableVehicles.value[idx] : null;
+});
+
+const selectedDriver = computed(() => {
+  const idx = parseInt(selectedDriverIndex.value);
+  return idx >= 0 ? availableDrivers.value[idx] : null;
+});
+
+const capacityPercentage = computed(() => {
+  if (!selectedVehicle.value || !newTrip.cargoWeight) return 0;
+  return (newTrip.cargoWeight / selectedVehicle.value.maxLoad) * 100;
+});
+
 const checkCapacity = () => {
   validationError.value = '';
-  const vehicleIdx = parseInt(selectedVehicleIndex.value);
-  if (vehicleIdx >= 0) {
-    const vehicle = availableVehicles.value[vehicleIdx];
-    if (newTrip.cargoWeight > vehicle.maxLoad) {
-      const overage = newTrip.cargoWeight - vehicle.maxLoad;
+  if (selectedVehicle.value) {
+    if (newTrip.cargoWeight > selectedVehicle.value.maxLoad) {
+      const overage = newTrip.cargoWeight - selectedVehicle.value.maxLoad;
       validationError.value = `Capacity exceeded by ${overage}kg — dispatch blocked`;
     }
   }
 };
 
-const dispatchTrip = () => {
+const openConfirmationModal = () => {
   checkCapacity();
   if (validationError.value) return;
+  showConfirmModal.value = true;
+};
 
-  const vehicle = availableVehicles.value[selectedVehicleIndex.value];
-  const driver = availableDrivers.value[selectedDriverIndex.value];
+const dispatchTrip = () => {
+  if (!selectedVehicle.value || !selectedDriver.value) return;
 
   const dispatchedRecord = {
     id: trips.value.length + 1041,
     source: newTrip.source,
     destination: newTrip.destination,
-    vehicle: vehicle.regNo,
-    driver: driver.name,
+    vehicle: selectedVehicle.value.regNo,
+    driver: selectedDriver.value.name,
     cargoWeight: newTrip.cargoWeight,
     plannedDistance: newTrip.plannedDistance,
     status: 'Dispatched',
@@ -211,29 +285,37 @@ const dispatchTrip = () => {
   };
 
   trips.value.push(dispatchedRecord);
-  showCreateForm.value = false;
-
+  
+  // Remove vehicle and driver from available lists
   availableVehicles.value.splice(selectedVehicleIndex.value, 1);
   availableDrivers.value.splice(selectedDriverIndex.value, 1);
 
+  // Reset indices and modal
   selectedVehicleIndex.value = -1;
   selectedDriverIndex.value = -1;
+  showConfirmModal.value = false;
+  showCreateForm.value = false;
+
   newTrip.source = '';
   newTrip.destination = '';
   newTrip.cargoWeight = 0;
   newTrip.plannedDistance = 0;
+  
+  showToast('Fleet dispatch started successfully!', 'success');
 };
 
 const completeTrip = (trip) => {
   trip.status = 'Completed';
   availableVehicles.value.push({ regNo: trip.vehicle, model: 'Restored vehicle', maxLoad: trip.cargoWeight + 200 });
   availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL', safetyScore: 85 });
+  showToast('Trip dispatches completed successfully and logged!', 'success');
 };
 
 const cancelTrip = (trip) => {
   trip.status = 'Cancelled';
   availableVehicles.value.push({ regNo: trip.vehicle, model: 'Restored vehicle', maxLoad: trip.cargoWeight + 200 });
   availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL', safetyScore: 85 });
+  showToast('Trip assignment cancelled.', 'info');
 };
 
 const selectForEdit = (trip) => {
@@ -289,6 +371,42 @@ const selectForEdit = (trip) => {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.capacity-tracker {
+  margin-top: 0.5rem;
+}
+
+.progress-bar-wrapper {
+  height: 0.4rem;
+  background-color: var(--border-color);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, #a855f7 100%);
+  border-radius: var(--border-radius-sm);
+  transition: width 0.3s ease;
+}
+
+.progress-fill.over-capacity {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.progress-metrics {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  font-weight: 700;
+}
+
+.progress-metrics.danger-text {
+  color: var(--danger);
 }
 
 .validation-warning {
@@ -446,6 +564,52 @@ const selectForEdit = (trip) => {
   padding: 3rem 0;
   border: 1px dashed var(--border-color);
   border-radius: var(--border-radius-md);
+}
+
+/* Confirmation modal custom overrides */
+.confirm-modal {
+  max-width: 480px;
+}
+
+.confirm-alert-text {
+  font-size: 0.85rem;
+  color: var(--warning);
+  background-color: var(--warning-glow);
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  margin-bottom: 1.25rem;
+}
+
+.summary-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.summary-item .lbl {
+  color: var(--text-secondary);
+}
+
+.summary-item .val {
+  color: #fff;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 @media (max-width: 950px) {
