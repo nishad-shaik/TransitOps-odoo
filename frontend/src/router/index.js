@@ -8,6 +8,7 @@ import Maintenance from '../views/Maintenance.vue';
 import FuelExpenses from '../views/FuelExpenses.vue';
 import Analytics from '../views/Analytics.vue';
 import Settings from '../views/Settings.vue';
+import Forbidden from '../views/Forbidden.vue';
 
 const routes = [
   {
@@ -65,6 +66,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/403',
+    name: 'Forbidden',
+    component: Forbidden,
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/dashboard'
   }
@@ -76,6 +83,16 @@ const router = createRouter({
 });
 
 import { useToast } from '../composables/useToast';
+
+// Role-based Access Control Permissions Matrix
+const rolePermissions = {
+  'Fleet Manager': ['/dashboard', '/vehicles', '/drivers', '/maintenance', '/analytics', '/settings', '/403'],
+  'Dispatcher': ['/dashboard', '/vehicles', '/trips', '/403'],
+  'Safety Officer': ['/dashboard', '/drivers', '/trips', '/403'],
+  'Financial Analyst': ['/dashboard', '/vehicles', '/fuel-expenses', '/analytics', '/403'],
+  'Driver': ['/dashboard', '/trips', '/403'],
+  'Developer': ['/dashboard', '/vehicles', '/drivers', '/trips', '/maintenance', '/fuel-expenses', '/analytics', '/settings', '/403']
+};
 
 // Navigation guard
 router.beforeEach((to, from, next) => {
@@ -98,12 +115,13 @@ router.beforeEach((to, from, next) => {
     next('/login');
   } else if (to.path === '/login' && token) {
     next('/dashboard');
-  } else if (token && user && user.role === 'Driver') {
-    // Driver Role access control: Can only access Dashboard, Trips, and Login/Logout
-    const allowedPaths = ['/dashboard', '/trips', '/login'];
+  } else if (token && user) {
+    const role = user.role || 'Driver';
+    const allowedPaths = rolePermissions[role] || ['/dashboard', '/trips'];
+    
     if (!allowedPaths.includes(to.path)) {
-      showToast('Access Denied: Drivers only have access to Dashboard & Trips.', 'warning');
-      next('/dashboard');
+      showToast(`Access Denied: Your role (${role}) is forbidden from accessing ${to.path}.`, 'error');
+      next('/403');
     } else {
       next();
     }
