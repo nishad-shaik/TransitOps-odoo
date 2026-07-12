@@ -44,103 +44,93 @@
       </div>
     </div>
 
-    <!-- Data Table Container (Desktop Only: md and above) -->
-    <div class="table-card hidden md:block">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Reg. No.</th>
-            <th>Name/Model</th>
-            <th>Type</th>
-            <th>Max Load (kg)</th>
-            <th>Odometer (km)</th>
-            <th>Acquisition Cost</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr 
-            v-for="vehicle in filteredVehicles" 
-            :key="vehicle.id" 
-            @click="openVehicleDrawer(vehicle)"
-            class="cursor-pointer hover:bg-white/5 transition"
-          >
-            <td class="font-mono highlight-text">{{ vehicle.registration_number }}</td>
-            <td>{{ vehicle.vehicle_name }}</td>
-            <td>
-              <span class="type-tag">{{ vehicle.type }}</span>
-            </td>
-            <td>{{ vehicle.max_load_capacity.toLocaleString() }}</td>
-            <td>{{ vehicle.odometer.toLocaleString() }}</td>
-            <td>${{ vehicle.acquisition_cost.toLocaleString() }}</td>
-            <td>
-              <span class="badge" :class="statusBadgeClass(vehicle.status)">
-                {{ vehicle.status }}
-              </span>
-            </td>
-            <td>
-              <button @click.stop="openVehicleDrawer(vehicle)" class="btn-text">Edit</button>
-            </td>
-          </tr>
-          <tr v-if="filteredVehicles.length === 0">
-            <td colspan="8" class="text-center empty-row">No vehicles found matching criteria.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Mobile Data Condensation List (Mobile Viewports: hidden on md and above) -->
-    <div class="mobile-accordion-list block md:hidden">
-      <div 
-        v-for="vehicle in filteredVehicles" 
-        :key="'mobile-' + vehicle.id" 
-        class="card mobile-accordion-card"
-        :class="{ expanded: expandedRegs.includes(vehicle.registration_number) }"
-      >
-        <!-- Row Header: 3 Vital columns only -->
-        <div class="accordion-header" @click="toggleAccordion(vehicle.registration_number)">
-          <div class="vital-col font-mono font-bold text-white">{{ vehicle.registration_number }}</div>
-          <div class="vital-col">
-            <span class="badge" :class="statusBadgeClass(vehicle.status)">
-              {{ vehicle.status }}
-            </span>
+    <!-- High-Density Split-Pane Operations Console (Desktop and Tablet Viewports) -->
+    <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 mt-4 h-[calc(100vh-210px)] overflow-hidden">
+      <!-- Left Column: 40% (4 grid cols) - Scrollable Asset Stream -->
+      <div class="lg:col-span-4 flex flex-col h-full overflow-y-auto space-y-3 pr-2 scrollable-stream">
+        <div 
+          v-for="vehicle in filteredVehicles" 
+          :key="vehicle.id"
+          @click="selectVehicle(vehicle)"
+          class="p-4 rounded-lg bg-[#1A1C26] border cursor-pointer transition-all duration-300 ease-in-out hover:translate-y-[-2px] hover:shadow-lg flex flex-col justify-between"
+          :class="selectedVehicle?.id === vehicle.id ? 'border-[#2563EB] shadow-lg shadow-blue-500/10' : 'border-[#2D3142]'"
+        >
+          <div class="flex justify-between items-start mb-2">
+            <span class="font-mono font-bold text-white text-base tracking-wider">{{ vehicle.registration_number }}</span>
+            <span class="badge" :class="statusBadgeClass(vehicle.status)">{{ vehicle.status }}</span>
           </div>
-          <div class="vital-col text-right pr-4 font-bold">{{ vehicle.odometer.toLocaleString() }} km</div>
-          <span class="chevron">&#9662;</span>
+          <div class="flex justify-between items-center text-xs text-[#94A3B8]">
+            <span class="font-medium text-slate-300">{{ vehicle.vehicle_name }}</span>
+            <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white font-mono text-[10px] uppercase tracking-widest">{{ vehicle.type }}</span>
+          </div>
         </div>
-
-        <!-- Expanded Accordion Content -->
-        <div class="accordion-content" v-if="expandedRegs.includes(vehicle.registration_number)">
-          <div class="meta-row">
-            <span class="lbl">Name/Model:</span>
-            <span class="val">{{ vehicle.vehicle_name }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="lbl">Type:</span>
-            <span class="val">{{ vehicle.type }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="lbl">Max Load Capacity:</span>
-            <span class="val font-mono">{{ vehicle.max_load_capacity.toLocaleString() }} kg</span>
-          </div>
-          <div class="meta-row">
-            <span class="lbl">Acquisition Cost:</span>
-            <span class="val font-mono">${{ vehicle.acquisition_cost.toLocaleString() }}</span>
-          </div>
-          <div class="meta-row action-row">
-            <button @click.stop="openVehicleDrawer(vehicle)" class="btn-sm btn-accent">Edit Vehicle</button>
-          </div>
+        <div v-if="filteredVehicles.length === 0" class="text-center p-8 text-[#94A3B8] bg-[#1A1C26] rounded-lg border border-[#2D3142]">
+          No vehicle assets match current filters
         </div>
       </div>
-      <div v-if="filteredVehicles.length === 0" class="card empty-row">
-        No vehicles found matching criteria.
+
+      <!-- Right Column: 60% (6 grid cols) - Deep Inspection Console -->
+      <div class="lg:col-span-6 flex flex-col h-full bg-[#1A1C26] border border-[#2D3142] rounded-lg overflow-hidden">
+        <div v-if="selectedVehicle" class="flex flex-col h-full">
+          <!-- Console Header -->
+          <div class="p-6 border-b border-[#2D3142] bg-[#1A1C26] flex justify-between items-center">
+            <div>
+              <span class="text-[10px] uppercase tracking-widest font-mono text-[#2563EB] font-bold">Logistics Asset Profile</span>
+              <h2 class="text-2xl font-bold text-white font-display mt-0.5">{{ selectedVehicle.vehicle_name }}</h2>
+              <p class="text-xs text-[#94A3B8] font-mono tracking-wider">{{ selectedVehicle.registration_number }}</p>
+            </div>
+            <button @click.stop="openVehicleDrawer(selectedVehicle)" class="btn-primary flex items-center gap-1.5">
+              <span>Edit Asset</span>
+            </button>
+          </div>
+
+          <!-- Console Body / Metadata Grid -->
+          <div class="p-6 flex-1 overflow-y-auto space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Current Odometer</label>
+                <span class="font-mono text-lg font-bold text-white">{{ selectedVehicle.odometer.toLocaleString() }} km</span>
+              </div>
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Acquisition Cost</label>
+                <span class="font-mono text-lg font-bold text-white">${{ selectedVehicle.acquisition_cost.toLocaleString() }}</span>
+              </div>
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Asset Class / Type</label>
+                <span class="text-lg font-bold text-white tracking-wide">{{ selectedVehicle.type }}</span>
+              </div>
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Operational Status</label>
+                <span class="badge mt-1 inline-block" :class="statusBadgeClass(selectedVehicle.status)">
+                  {{ selectedVehicle.status }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Horizontal Capacity Progress Column -->
+            <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142] space-y-3">
+              <div class="flex justify-between items-center text-xs">
+                <span class="font-mono text-[#94A3B8] uppercase tracking-widest">Payload Carrying Capacity</span>
+                <span class="font-mono font-bold text-white">{{ selectedVehicle.max_load_capacity.toLocaleString() }} kg Max</span>
+              </div>
+              <div class="h-8 w-full bg-[#1A1C26] border border-[#2D3142] rounded overflow-hidden relative flex items-center justify-center">
+                <div class="absolute left-0 top-0 h-full bg-[#2563EB]" style="width: 100%"></div>
+                <span class="absolute text-xs font-mono font-bold text-white z-10">100% CAPACITY BLOCK DESIGN LIMIT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="flex flex-col items-center justify-center h-full text-[#94A3B8] p-8">
+          <Info class="h-12 w-12 text-[#2D3142] mb-3" />
+          <p class="font-display font-medium text-slate-400">No Asset Selected</p>
+          <p class="text-xs text-slate-500 mt-1">Select a logistics vehicle from the stream view to inspect telemetry</p>
+        </div>
       </div>
     </div>
 
     <!-- Right-Hand Sliding Glassmorphic Side Drawer -->
     <div 
-      class="fixed top-0 right-0 h-full w-full max-w-[460px] bg-[#161B26] bg-opacity-50 backdrop-blur-lg border-l border-white/10 z-[999] shadow-2xl flex flex-col transition-all duration-300 ease-in-out"
+      class="fixed top-0 right-0 h-full w-full max-w-[460px] bg-[#161B26]/90 backdrop-blur-lg border-l border-white/10 z-[999] shadow-2xl flex flex-col transition-all duration-300 ease-in-out"
       :class="showAddModal ? 'translate-x-0' : 'translate-x-full'"
     >
       <div class="p-6 border-b border-white/5 flex justify-between items-center bg-[#0B0F19]/30">
@@ -253,7 +243,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue';
+import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { Info, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
 import { useApiResource } from '../composables/useApiResource';
@@ -267,7 +257,7 @@ const filterStatus = ref('All');
 const showAddModal = ref(false);
 const isSubmitting = ref(false);
 const isEditing = ref(false);
-const expandedRegs = ref([]);
+const selectedVehicle = ref(null);
 
 const { data: apiVehicles, fetch: fetchVehicles, create: createVehicle } = useApiResource('/vehicles');
 const vehicles = computed(() => apiVehicles.value || []);
@@ -275,6 +265,20 @@ const vehicles = computed(() => apiVehicles.value || []);
 onMounted(() => {
   fetchVehicles();
 });
+
+const selectVehicle = (v) => {
+  selectedVehicle.value = v;
+};
+
+watch(filteredVehicles, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    if (!selectedVehicle.value || !newVal.some(x => x.id === selectedVehicle.value.id)) {
+      selectedVehicle.value = newVal[0];
+    }
+  } else {
+    selectedVehicle.value = null;
+  }
+}, { immediate: true });
 
 const newVehicle = reactive({
   registration_number: '',
@@ -285,6 +289,7 @@ const newVehicle = reactive({
   acquisition_cost: 20000,
   status: 'Available'
 });
+
 
 const toggleAccordion = (regNo) => {
   if (expandedRegs.value.includes(regNo)) {
