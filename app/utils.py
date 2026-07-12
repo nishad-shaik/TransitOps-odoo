@@ -1,11 +1,42 @@
-from flask import request, jsonify
-from app.utils import parse_date, bad_request
+from datetime import datetime
+from flask import jsonify
 
-@app.route('/maintenance', methods=['POST'])
-def create_maintenance():
-    data = request.get_json()
-    start_date = parse_date(data.get('start_date'))
-    
-    if not start_date:
-        return bad_request("Invalid or missing start_date")
-    return jsonify({"message": "Maintenance created"}), 201
+def parse_date(date_str):
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+def bad_request(message):
+    return jsonify({
+        "error": {
+            "code": "BAD_REQUEST",
+            "message": message
+        }
+    }), 400
+
+def unauthorized(message="Authentication required"):
+    return jsonify({
+        "error": {
+            "code": "UNAUTHORIZED",
+            "message": message
+        }
+    }), 401
+
+def forbidden(message="Access denied"):
+    return jsonify({
+        "error": {
+            "code": "FORBIDDEN",
+            "message": message
+        }
+    }), 403
+
+def not_found(message="Resource not found"):
+    return jsonify({
+        "error": {
+            "code": "NOT_FOUND",
+            "message": message
+        }
+    }), 404

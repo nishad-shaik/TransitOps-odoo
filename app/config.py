@@ -5,4 +5,10 @@ class Config:
         "sqlite:///transitops.db",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
+    
+    # Secure SECRET_KEY config: fail loudly in non-development envs if not set
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    if not SECRET_KEY:
+        if os.environ.get("FLASK_ENV") == "production":
+            raise ValueError("SECRET_KEY environment variable is not defined in production environment!")
+        SECRET_KEY = "dev-fallback-secret-key-do-not-use-in-prod"

@@ -3,7 +3,7 @@ import os
 import random
 import sys
 import uuid
-import hashlib  # Changed to native hashlib to bypass the broken passlib/bcrypt combination
+from werkzeug.security import generate_password_hash
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import create_engine
@@ -30,8 +30,9 @@ DEFAULT_DB_URL = "sqlite:///transitops.db"
 
 
 def hash_password(password: str) -> str:
-    """Safe native fallback for seeding passwords without depending on broken passlib mixins."""
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+    """Secure password hashing utilizing PBKDF2/scrypt via werkzeug."""
+    return generate_password_hash(password)
+
 
 
 def get_engine():
