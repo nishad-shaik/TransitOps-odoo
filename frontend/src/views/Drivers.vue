@@ -43,8 +43,8 @@
       </div>
     </div>
 
-    <!-- Drivers Table -->
-    <div class="table-card">
+    <!-- Drivers Table (Desktop Only: md and above) -->
+    <div class="table-card hidden md:block">
       <table class="data-table">
         <thead>
           <tr>
@@ -88,7 +88,7 @@
               <button
                 @click="toggleStatus(driver)"
                 class="btn-text"
-                :disabled="driver.status === 'On Trip'"
+                :disabled="driver.status === 'On Trip' || isSubmitting"
               >
                 Toggle Status
               </button>
@@ -99,6 +99,71 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Viewports Accordion Grid (Mobile Layouts: hidden on md and above) -->
+    <div class="mobile-accordion-list block md:hidden">
+      <div 
+        v-for="driver in filteredDrivers" 
+        :key="'mobile-dr-' + driver.licenseNo" 
+        class="card mobile-accordion-card"
+        :class="{ expanded: expandedDriverLicenses.includes(driver.licenseNo) }"
+      >
+        <!-- Accordion Header: 3 Vital columns only -->
+        <div class="accordion-header" @click="toggleDriverAccordion(driver.licenseNo)">
+          <div class="vital-col font-bold text-white">{{ driver.name }}</div>
+          <div class="vital-col">
+            <span class="badge" :class="statusBadgeClass(driver.status)">
+              {{ driver.status }}
+            </span>
+          </div>
+          <div class="vital-col text-right pr-4">
+            <span class="safety-badge" :class="getSafetyClass(driver.safetyScore)">
+              {{ driver.safetyScore }}/100
+            </span>
+          </div>
+          <span class="chevron">&#9662;</span>
+        </div>
+
+        <!-- Expanded Accordion Content -->
+        <div class="accordion-content" v-if="expandedDriverLicenses.includes(driver.licenseNo)">
+          <div class="meta-row">
+            <span class="lbl">License No:</span>
+            <span class="val font-mono">{{ driver.licenseNo }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="lbl">Category:</span>
+            <span class="val">{{ driver.category }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="lbl">Expiry Date:</span>
+            <span class="val" :class="{ 'text-expired': isExpired(driver.expiryDate) }">
+              {{ driver.expiryDate }}
+              <span v-if="isExpired(driver.expiryDate)" class="expiry-flag ml-1">EXPIRED</span>
+            </span>
+          </div>
+          <div class="meta-row">
+            <span class="lbl">Contact:</span>
+            <span class="val font-mono">{{ driver.contact }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="lbl">Trip Completion:</span>
+            <span class="val font-bold">{{ driver.tripCompletionRate }}%</span>
+          </div>
+          <div class="meta-row action-row">
+            <button
+              @click="toggleStatus(driver)"
+              class="btn-sm btn-accent"
+              :disabled="driver.status === 'On Trip' || isSubmitting"
+            >
+              Toggle Status
+            </button>
+          </div>
+        </div>
+      </div>
+      <div v-if="filteredDrivers.length === 0" class="card empty-row">
+        No drivers found matching criteria.
+      </div>
     </div>
 
     <!-- Add Driver Modal -->
@@ -143,7 +208,9 @@
           </div>
           <div class="modal-actions">
             <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary">Save Driver</button>
+            <button type="submit" class="btn-primary" :disabled="isSubmitting">
+              {{ isSubmitting ? 'Saving...' : 'Save Driver' }}
+            </button>
           </div>
         </form>
       </div>
@@ -153,11 +220,16 @@
 
 <script setup>
 import { ref, computed, reactive } from 'vue';
+import { useToast } from '../composables/useToast';
+
+const { showToast } = useToast();
 
 const searchQuery = ref('');
 const filterStatus = ref('All');
 const filterCompliance = ref('All');
 const showAddModal = ref(false);
+const isSubmitting = ref(false);
+const expandedDriverLicenses = ref([]);
 
 const drivers = ref([
   { name: 'Alex Johnson', licenseNo: 'DL-55291', category: 'Class B', expiryDate: '2027-08-14', contact: '555-0144', tripCompletionRate: 98, safetyScore: 92, status: 'Available' },
@@ -180,7 +252,7 @@ const newDriver = reactive({
 
 const isExpired = (dateStr) => {
   const expiry = new Date(dateStr);
-  const now = new Date();
+  const now = new Date('2026-07-12'); // Fixed mock date matching the dynamic alerts anchor
   return expiry < now;
 };
 
@@ -195,6 +267,14 @@ const statusBadgeClass = (status) => {
   if (status === 'On Trip') return 'badge-info';
   if (status === 'Off Duty') return 'badge-warning';
   return 'badge-danger';
+};
+
+const toggleDriverAccordion = (licenseNo) => {
+  if (expandedDriverLicenses.value.includes(licenseNo)) {
+    expandedDriverLicenses.value = expandedDriverLicenses.value.filter(l => l !== licenseNo);
+  } else {
+    expandedDriverLicenses.value.push(licenseNo);
+  }
 };
 
 const filteredDrivers = computed(() => {
@@ -214,32 +294,66 @@ const filteredDrivers = computed(() => {
   });
 });
 
-const toggleStatus = (driver) => {
-  if (driver.status === 'On Trip') return;
+const toggleStatus = async (driver) => {
+  if (driver.status === 'On Trip' || isSubmitting.value) return;
   
-  if (driver.status === 'Available') {
-    driver.status = 'Off Duty';
-  } else if (driver.status === 'Off Duty') {
-    driver.status = 'Suspended';
-  } else if (driver.status === 'Suspended') {
-    driver.status = 'Available';
-  }
+  isSubmitting.value = true;
+  
+  setTimeout(() => {
+    if (driver.status === 'Available') {
+      driver.status = 'Off Duty';
+    } else if (driver.status === 'Off Duty') {
+      driver.status = 'Suspended';
+    } else if (driver.status === 'Suspended') {
+      driver.status = 'Available';
+    }
+    showToast(`Status toggled for ${driver.name}`, 'info');
+    isSubmitting.value = false;
+  }, 300);
 };
 
-const saveDriver = () => {
-  const exists = drivers.value.some(d => d.licenseNo.toLowerCase() === newDriver.licenseNo.toLowerCase());
+const saveDriver = async () => {
+  if (isSubmitting.value) return;
+
+  const licenseNoCopy = String(newDriver.licenseNo).trim();
+  const exists = drivers.value.some(d => d.licenseNo.toLowerCase() === licenseNoCopy.toLowerCase());
+  
   if (exists) {
-    alert('License Number must be unique');
+    showToast('Validation Error: License Number must be unique.', 'error');
     return;
   }
 
-  drivers.value.push({ ...newDriver });
-  showAddModal.value = false;
-  newDriver.name = '';
-  newDriver.licenseNo = '';
-  newDriver.expiryDate = '';
-  newDriver.contact = '';
-  newDriver.safetyScore = 90;
+  isSubmitting.value = true;
+
+  setTimeout(() => {
+    drivers.value.push({
+      name: String(newDriver.name).trim(),
+      licenseNo: licenseNoCopy,
+      category: newDriver.category,
+      expiryDate: newDriver.expiryDate,
+      contact: String(newDriver.contact).trim(),
+      tripCompletionRate: 100,
+      safetyScore: Number(newDriver.safetyScore),
+      status: 'Available'
+    });
+
+    showToast(`Driver ${newDriver.name} added successfully!`, 'success');
+    showAddModal.value = false;
+    isSubmitting.value = false;
+
+    // Reset Form
+    newDriver.name = '';
+    newDriver.licenseNo = '';
+    newDriver.expiryDate = '';
+    newDriver.contact = '';
+    newDriver.safetyScore = 90;
+  }, 800);
+};
+</script>
+
+<script>
+export default {
+  name: 'Drivers'
 };
 </script>
 
@@ -316,17 +430,16 @@ const saveDriver = () => {
   cursor: pointer;
 }
 
-.highlight-text {
-  font-weight: 700;
-  color: #fff;
-}
-
 .font-mono {
   font-family: var(--mono);
 }
 
 .font-bold {
   font-weight: 700;
+}
+
+.highlight-text {
+  color: #fff;
 }
 
 .type-tag {
@@ -343,35 +456,35 @@ const saveDriver = () => {
 }
 
 .expiry-flag {
-  font-size: 0.7rem;
-  margin-left: 0.35rem;
   background-color: var(--danger-glow);
   color: var(--danger);
-  padding: 0.15rem 0.4rem;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
   border-radius: var(--border-radius-sm);
-  font-weight: 700;
+  font-weight: 800;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .safety-badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--border-radius-sm);
   font-weight: 700;
   font-size: 0.85rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--border-radius-sm);
 }
 
 .safety-badge.excellent {
-  background-color: var(--success-glow);
   color: var(--success);
+  background-color: var(--success-glow);
 }
 
 .safety-badge.good {
-  background-color: var(--info-glow);
   color: var(--info);
+  background-color: var(--info-glow);
 }
 
 .safety-badge.risk {
-  background-color: var(--danger-glow);
   color: var(--danger);
+  background-color: var(--danger-glow);
 }
 
 .btn-text {
@@ -388,18 +501,84 @@ const saveDriver = () => {
   color: var(--primary-hover);
 }
 
-.btn-text:disabled {
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
 .empty-row {
   color: var(--text-secondary);
   padding: 3rem;
   text-align: center;
 }
 
-/* Modal Extensions */
+/* Mobile Accordion details */
+.mobile-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-accordion-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--border-radius-md);
+  transition: border-color 0.2s ease;
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+}
+
+.vital-col {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.chevron {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.mobile-accordion-card.expanded .chevron {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  background-color: rgba(255, 255, 255, 0.01);
+  border-top: 1px solid var(--border-color);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.meta-row .lbl {
+  color: var(--text-secondary);
+}
+
+.meta-row .val {
+  color: #fff;
+  font-weight: 600;
+}
+
+.action-row {
+  margin-top: 0.5rem;
+  justify-content: flex-end;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
