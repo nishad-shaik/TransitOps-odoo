@@ -1,14 +1,17 @@
 <template>
   <div class="drivers-container">
+    <!-- Page Header -->
     <div class="page-header">
       <div>
         <h1>Drivers &amp; Safety</h1>
         <p class="subtitle">Manage driver records, licensing compliance, and safety ratings</p>
       </div>
-      <button @click="showAddModal = true" class="btn-primary">+ Add Driver</button>
+      <button @click="showAddModal = true" class="btn-primary">
+        <span>+</span> Add Driver
+      </button>
     </div>
 
-    <!-- Info banner containing safety and licensing business rules -->
+    <!-- Compliance Banner -->
     <div class="info-banner warning-style">
       <span class="info-icon">⚠️</span>
       <p><strong>Compliance Rule:</strong> Drivers with an expired license or Suspended status are automatically blocked from trip assignments in the dispatcher.</p>
@@ -17,6 +20,7 @@
     <!-- Search & Filter Controls -->
     <div class="table-actions">
       <div class="search-box">
+        <span class="search-icon">🔍</span>
         <input
           type="text"
           v-model="searchQuery"
@@ -57,35 +61,37 @@
         </thead>
         <tbody>
           <tr v-for="driver in filteredDrivers" :key="driver.licenseNo">
-            <td class="font-bold">{{ driver.name }}</td>
+            <td class="highlight-text">{{ driver.name }}</td>
             <td class="font-mono">{{ driver.licenseNo }}</td>
-            <td>{{ driver.category }}</td>
-            <td :class="{ 'text-expired': isExpired(driver.expiryDate) }">
-              {{ driver.expiryDate }}
-              <span v-if="isExpired(driver.expiryDate)" class="expiry-flag">[EXPIRED]</span>
+            <td>
+              <span class="type-tag">{{ driver.category }}</span>
+            </td>
+            <td>
+              <div :class="{ 'text-expired': isExpired(driver.expiryDate) }">
+                {{ driver.expiryDate }}
+                <span v-if="isExpired(driver.expiryDate)" class="expiry-flag">EXPIRED</span>
+              </div>
             </td>
             <td>{{ driver.contact }}</td>
-            <td>{{ driver.tripCompletionRate }}%</td>
+            <td class="font-bold">{{ driver.tripCompletionRate }}%</td>
             <td>
-              <span class="safety-score" :class="getSafetyClass(driver.safetyScore)">
+              <span class="safety-badge" :class="getSafetyClass(driver.safetyScore)">
                 {{ driver.safetyScore }}/100
               </span>
             </td>
             <td>
-              <span class="status-badge" :class="driver.status.toLowerCase().replace(' ', '-')">
+              <span class="badge" :class="statusBadgeClass(driver.status)">
                 {{ driver.status }}
               </span>
             </td>
             <td>
-              <div class="actions-cell">
-                <button
-                  @click="toggleStatus(driver)"
-                  class="btn-text"
-                  :disabled="driver.status === 'On Trip'"
-                >
-                  Toggle Status
-                </button>
-              </div>
+              <button
+                @click="toggleStatus(driver)"
+                class="btn-text"
+                :disabled="driver.status === 'On Trip'"
+              >
+                Toggle Status
+              </button>
             </td>
           </tr>
           <tr v-if="filteredDrivers.length === 0">
@@ -96,9 +102,12 @@
     </div>
 
     <!-- Add Driver Modal -->
-    <div v-if="showAddModal" class="modal-overlay">
+    <div v-if="showAddModal" class="modal-overlay" @click.self="showAddModal = false">
       <div class="modal">
-        <h3>Add New Driver</h3>
+        <div class="modal-header">
+          <h3>Add New Driver</h3>
+          <button @click="showAddModal = false" class="close-btn">&times;</button>
+        </div>
         <form @submit.prevent="saveDriver">
           <div class="form-group">
             <label>Driver Name</label>
@@ -181,6 +190,13 @@ const getSafetyClass = (score) => {
   return 'risk';
 };
 
+const statusBadgeClass = (status) => {
+  if (status === 'Available') return 'badge-success';
+  if (status === 'On Trip') return 'badge-info';
+  if (status === 'Off Duty') return 'badge-warning';
+  return 'badge-danger';
+};
+
 const filteredDrivers = computed(() => {
   return drivers.value.filter(d => {
     const matchesSearch = d.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
@@ -211,7 +227,6 @@ const toggleStatus = (driver) => {
 };
 
 const saveDriver = () => {
-  // Check unique license number constraint
   const exists = drivers.value.some(d => d.licenseNo.toLowerCase() === newDriver.licenseNo.toLowerCase());
   if (exists) {
     alert('License Number must be unique');
@@ -220,7 +235,6 @@ const saveDriver = () => {
 
   drivers.value.push({ ...newDriver });
   showAddModal.value = false;
-  // Reset
   newDriver.name = '';
   newDriver.licenseNo = '';
   newDriver.expiryDate = '';
@@ -243,31 +257,29 @@ const saveDriver = () => {
 }
 
 .page-header h1 {
+  font-size: 2.25rem;
   margin: 0;
-  font-size: 1.75rem;
-  color: var(--text-h);
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  color: var(--text);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+}
+
+.warning-style {
+  background-color: var(--warning-glow);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  padding: 1rem 1.25rem;
+  border-radius: var(--border-radius-md);
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
   font-size: 0.9rem;
 }
 
-.info-banner {
-  background-color: rgba(245, 158, 11, 0.05);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-  font-size: 0.85rem;
-  color: var(--text-h);
-}
-
-.info-banner p {
-  margin: 0;
+.info-icon {
+  font-size: 1.1rem;
 }
 
 .table-actions {
@@ -277,240 +289,135 @@ const saveDriver = () => {
   flex-wrap: wrap;
 }
 
-.search-box input {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  width: 300px;
-  background-color: var(--bg);
-  color: var(--text-h);
-  outline: none;
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.search-box input:focus {
-  border-color: var(--accent);
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--text-muted);
+}
+
+.search-box input {
+  padding-left: 2.75rem;
+  width: 320px;
 }
 
 .filter-group {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .filter-group select {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
-  font-size: 0.9rem;
+  width: auto;
+  cursor: pointer;
 }
 
-.table-card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  box-shadow: var(--shadow);
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.data-table th,
-.data-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.data-table th {
-  color: var(--text);
-  font-weight: 600;
-  background-color: var(--social-bg);
-}
-
-.data-table td {
-  color: var(--text-h);
-}
-
-.font-bold {
-  font-weight: 600;
+.highlight-text {
+  font-weight: 700;
+  color: #fff;
 }
 
 .font-mono {
   font-family: var(--mono);
 }
 
+.font-bold {
+  font-weight: 700;
+}
+
+.type-tag {
+  background-color: var(--border-color);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
 .text-expired {
-  color: #ef4444;
-  font-weight: 600;
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .expiry-flag {
-  font-size: 0.75rem;
-  margin-left: 0.25rem;
-  background-color: rgba(239, 68, 68, 0.1);
-  padding: 0.1rem 0.3rem;
-  border-radius: 0.25rem;
-}
-
-.safety-score {
+  font-size: 0.7rem;
+  margin-left: 0.35rem;
+  background-color: var(--danger-glow);
+  color: var(--danger);
   padding: 0.15rem 0.4rem;
-  border-radius: 0.25rem;
-  font-weight: 600;
+  border-radius: var(--border-radius-sm);
+  font-weight: 700;
 }
 
-.safety-score.excellent {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.safety-score.good {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-}
-
-.safety-score.risk {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.status-badge {
+.safety-badge {
   padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
+  border-radius: var(--border-radius-sm);
+  font-weight: 700;
+  font-size: 0.85rem;
 }
 
-.status-badge.available {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+.safety-badge.excellent {
+  background-color: var(--success-glow);
+  color: var(--success);
 }
 
-.status-badge.on-trip {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+.safety-badge.good {
+  background-color: var(--info-glow);
+  color: var(--info);
 }
 
-.status-badge.off-duty {
-  background-color: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
-}
-
-.status-badge.suspended {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.btn-primary {
-  padding: 0.5rem 1rem;
-  background-color: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-secondary {
-  padding: 0.5rem 1rem;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text-h);
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
+.safety-badge.risk {
+  background-color: var(--danger-glow);
+  color: var(--danger);
 }
 
 .btn-text {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--primary);
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.btn-text:hover {
+  color: var(--primary-hover);
 }
 
 .btn-text:disabled {
-  color: var(--text);
-  opacity: 0.5;
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
 .empty-row {
-  color: var(--text);
-  padding: 2rem;
+  color: var(--text-secondary);
+  padding: 3rem;
+  text-align: center;
 }
 
-/* Modal styling */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+/* Modal Extensions */
+.modal-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  margin-bottom: 1.5rem;
 }
 
-.modal {
-  background-color: var(--bg);
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border);
-}
-
-.modal h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-h);
-}
-
-.form-group {
-  margin-bottom: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-}
-
-.modal label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.modal input,
-.modal select {
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
-  outline: none;
-}
-
-.modal input:focus {
-  border-color: var(--accent);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
 }
 </style>
