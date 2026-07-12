@@ -1,5 +1,6 @@
 <template>
   <div class="analytics-container">
+    <!-- Page Header -->
     <div class="page-header">
       <div>
         <h1>Reports &amp; Analytics</h1>
@@ -11,53 +12,63 @@
     <!-- Derived Metrics Cards -->
     <div class="kpi-grid">
       <div class="kpi-card" v-for="metric in metrics" :key="metric.title">
-        <span class="label">{{ metric.title }}</span>
+        <div class="metric-top">
+          <span class="label">{{ metric.title }}</span>
+        </div>
         <span class="value">{{ metric.value }}</span>
         <span class="description">{{ metric.desc }}</span>
       </div>
     </div>
 
-    <!-- Charts / Analysis Blocks -->
+    <!-- Grid Layout -->
     <div class="analytics-grid">
-      <!-- Vehicle ROI & Efficiency Registry -->
+      <!-- Vehicle ROI & Performance Registry -->
       <div class="card grid-card">
         <h3>Vehicle ROI &amp; Performance Ranking</h3>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Vehicle</th>
-              <th>Revenue</th>
-              <th>Expenses (Fuel+Maint)</th>
-              <th>Acquisition Cost</th>
-              <th>ROI %</th>
-              <th>Efficiency</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="vehicle in roiData" :key="vehicle.regNo">
-              <td class="font-bold">{{ vehicle.regNo }}</td>
-              <td>${{ vehicle.revenue.toLocaleString() }}</td>
-              <td>${{ vehicle.expenses.toLocaleString() }}</td>
-              <td>${{ vehicle.acqCost.toLocaleString() }}</td>
-              <td class="font-bold" :class="getRoiClass(vehicle.roi)">
-                {{ vehicle.roi }}%
-              </td>
-              <td>{{ vehicle.efficiency }} km/L</td>
-            </tr>
-          </tbody>
-        </table>
+        <p class="card-subtitle">Detailed breakdown of acquisition costs, operational costs, and ROI metrics</p>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Revenue</th>
+                <th>Expenses</th>
+                <th>Acq. Cost</th>
+                <th>ROI %</th>
+                <th>Efficiency</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="vehicle in roiData" :key="vehicle.regNo">
+                <td class="font-bold highlight-text">{{ vehicle.regNo }}</td>
+                <td>${{ vehicle.revenue.toLocaleString() }}</td>
+                <td>${{ vehicle.expenses.toLocaleString() }}</td>
+                <td>${{ vehicle.acqCost.toLocaleString() }}</td>
+                <td class="font-bold" :class="getRoiClass(vehicle.roi)">
+                  {{ vehicle.roi }}%
+                </td>
+                <td>
+                  <span class="efficiency-value">{{ vehicle.efficiency }} km/L</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Cost Breakdowns -->
       <div class="card cost-breakdown">
         <h3>Top Operational Expenses</h3>
+        <p class="card-subtitle">Proportional breakdown of monthly costs</p>
         <div class="bar-chart-simulated">
           <div class="bar-item" v-for="item in expenseItems" :key="item.label">
-            <span class="bar-label">{{ item.label }}</span>
+            <div class="bar-info">
+              <span class="bar-label">{{ item.label }}</span>
+              <span class="bar-value">${{ item.value.toLocaleString() }}</span>
+            </div>
             <div class="bar-wrapper">
               <div class="bar-fill" :style="{ width: item.percentage + '%' }"></div>
             </div>
-            <span class="bar-value">${{ item.value.toLocaleString() }}</span>
           </div>
         </div>
       </div>
@@ -89,11 +100,10 @@ const expenseItems = ref([
 ]);
 
 const getRoiClass = (roi) => {
-  return roi >= 25 ? 'high' : 'medium';
+  return roi >= 25 ? 'text-success' : 'text-info';
 };
 
 const downloadCSV = () => {
-  // Generate simple CSV content in browser
   let csvContent = 'data:text/csv;charset=utf-8,';
   csvContent += 'Vehicle,Revenue,Expenses,AcqCost,ROI,Efficiency\n';
   
@@ -115,7 +125,7 @@ const downloadCSV = () => {
 .analytics-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.75rem;
 }
 
 .page-header {
@@ -125,148 +135,135 @@ const downloadCSV = () => {
 }
 
 .page-header h1 {
+  font-size: 2.25rem;
   margin: 0;
-  font-size: 1.75rem;
-  color: var(--text-h);
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
 }
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
 }
 
 .kpi-card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  padding: 1.25rem;
-  border-radius: 0.5rem;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  border-radius: var(--border-radius-lg);
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
 }
 
 .kpi-card .label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .kpi-card .value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-h);
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #fff;
   margin: 0.5rem 0;
 }
 
 .kpi-card .description {
-  font-size: 0.75rem;
-  color: var(--text);
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .analytics-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
-}
-
-.card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  box-shadow: var(--shadow);
+  grid-template-columns: 1.8fr 1fr;
+  gap: 1.75rem;
 }
 
 .card h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-h);
+  margin: 0;
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.9rem;
+.card-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
 }
 
-.data-table th,
-.data-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
+.table-wrapper {
+  overflow-x: auto;
 }
 
-.data-table th {
-  color: var(--text);
-  font-weight: 600;
+.font-bold { font-weight: 700; }
+.highlight-text { color: #fff; }
+
+.text-success { color: var(--success); }
+.text-info { color: var(--info); }
+
+.efficiency-value {
+  background-color: rgba(255,255,255,0.03);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.85rem;
 }
-
-.data-table td {
-  color: var(--text-h);
-}
-
-.font-bold { font-weight: 600; }
-
-.font-bold.high { color: #10b981; }
-.font-bold.medium { color: #3b82f6; }
 
 .bar-chart-simulated {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .bar-item {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.85rem;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bar-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
 }
 
 .bar-label {
-  width: 120px;
-  color: var(--text-h);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .bar-wrapper {
-  flex: 1;
-  height: 0.75rem;
-  background-color: var(--social-bg);
-  border-radius: 0.375rem;
+  height: 0.6rem;
+  background-color: var(--border-color);
+  border-radius: var(--border-radius-sm);
   overflow: hidden;
 }
 
 .bar-fill {
   height: 100%;
-  background-color: var(--accent);
-  border-radius: 0.375rem;
+  background: linear-gradient(90deg, var(--primary) 0%, #a855f7 100%);
+  border-radius: var(--border-radius-sm);
+  transition: width 1s ease-in-out;
 }
 
 .bar-value {
-  width: 70px;
-  text-align: right;
-  font-weight: 600;
-  color: var(--text-h);
+  font-weight: 700;
+  color: #fff;
 }
 
-.btn-primary {
-  padding: 0.5rem 1rem;
-  background-color: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .analytics-grid {
     grid-template-columns: 1fr;
   }

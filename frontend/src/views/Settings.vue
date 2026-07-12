@@ -1,5 +1,6 @@
 <template>
   <div class="settings-container">
+    <!-- Page Header -->
     <div class="page-header">
       <div>
         <h1>Settings &amp; Role Matrix</h1>
@@ -8,10 +9,13 @@
       <button @click="saveSettings" class="btn-primary">Save Settings</button>
     </div>
 
+    <!-- Layout Grid -->
     <div class="settings-grid">
       <!-- General Org Settings Card -->
       <div class="card">
         <h3>Organization Configurations</h3>
+        <p class="card-subtitle">Manage default currencies, depots, and localization units</p>
+        
         <form @submit.prevent="saveSettings" class="settings-form">
           <div class="form-group">
             <label>Depot Name</label>
@@ -41,7 +45,7 @@
       <!-- RBAC Info Card -->
       <div class="card rbac-card">
         <h3>Role Permission Matrix</h3>
-        <p class="matrix-desc">Permissions are enforced server-side via the Flask application and mirrored in the Vue router guards.</p>
+        <p class="card-subtitle">Permissions are enforced server-side via the Flask application and mirrored in the Vue router guards.</p>
         
         <div class="matrix-wrapper">
           <table class="matrix-table">
@@ -57,12 +61,22 @@
             </thead>
             <tbody>
               <tr v-for="row in rbacMatrix" :key="row.role">
-                <td class="font-bold">{{ row.role }}</td>
-                <td :class="getPermClass(row.fleet)">{{ row.fleet }}</td>
-                <td :class="getPermClass(row.drivers)">{{ row.drivers }}</td>
-                <td :class="getPermClass(row.trips)">{{ row.trips }}</td>
-                <td :class="getPermClass(row.expenses)">{{ row.expenses }}</td>
-                <td :class="getPermClass(row.analytics)">{{ row.analytics }}</td>
+                <td class="font-bold highlight-text">{{ row.role }}</td>
+                <td>
+                  <span class="matrix-badge" :class="getPermClass(row.fleet)">{{ row.fleet }}</span>
+                </td>
+                <td>
+                  <span class="matrix-badge" :class="getPermClass(row.drivers)">{{ row.drivers }}</span>
+                </td>
+                <td>
+                  <span class="matrix-badge" :class="getPermClass(row.trips)">{{ row.trips }}</span>
+                </td>
+                <td>
+                  <span class="matrix-badge" :class="getPermClass(row.expenses)">{{ row.expenses }}</span>
+                </td>
+                <td>
+                  <span class="matrix-badge" :class="getPermClass(row.analytics)">{{ row.analytics }}</span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -113,34 +127,31 @@ const saveSettings = () => {
 }
 
 .page-header h1 {
+  font-size: 2.25rem;
   margin: 0;
-  font-size: 1.75rem;
-  color: var(--text-h);
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
 }
 
 .settings-grid {
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 1.5rem;
-}
-
-.card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  box-shadow: var(--shadow);
+  grid-template-columns: 1fr 1.6fr;
+  gap: 1.75rem;
 }
 
 .card h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-h);
+  margin: 0;
+}
+
+.card-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .settings-form {
@@ -149,49 +160,10 @@ const saveSettings = () => {
   gap: 1rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-}
-
-.form-group label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.form-group input,
-.form-group select {
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
-  outline: none;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  border-color: var(--accent);
-}
-
-.rbac-card {
-  display: flex;
-  flex-direction: column;
-}
-
-.matrix-desc {
-  font-size: 0.85rem;
-  color: var(--text);
-  margin-top: 0;
-  margin-bottom: 1.5rem;
 }
 
 .matrix-wrapper {
@@ -202,52 +174,59 @@ const saveSettings = () => {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.85rem;
 }
 
 .matrix-table th,
 .matrix-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.85rem;
 }
 
 .matrix-table th {
-  color: var(--text);
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: rgba(255, 255, 255, 0.015);
 }
 
 .matrix-table td {
-  color: var(--text-h);
+  color: var(--text-primary);
 }
 
-.font-bold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.highlight-text { color: #fff; }
 
-.full-access {
-  color: #10b981;
-  font-weight: 600;
+.matrix-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
-.read-only {
-  color: #3b82f6;
-  font-weight: 500;
+.matrix-badge.full-access {
+  background-color: var(--success-glow);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
-.no-access {
-  color: #ef4444;
-  opacity: 0.8;
+.matrix-badge.read-only {
+  background-color: var(--info-glow);
+  color: var(--info);
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-.btn-primary {
-  padding: 0.5rem 1rem;
-  background-color: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
+.matrix-badge.no-access {
+  background-color: var(--danger-glow);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  opacity: 0.75;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .settings-grid {
     grid-template-columns: 1fr;
   }
