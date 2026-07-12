@@ -65,6 +65,25 @@
       </form>
     </div>
 
+    <!-- Table Action Controls -->
+    <div class="table-actions">
+      <div class="search-box">
+        <Search class="search-icon-svg" />
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="Search by Vehicle or service description..."
+        />
+      </div>
+      <div class="filter-group">
+        <select v-model="filterStatus">
+          <option value="All">All Statuses</option>
+          <option value="Open">Open</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
+    </div>
+
     <!-- Service Logs Table (Desktop: md and above) -->
     <div class="table-card hidden md:block">
       <table class="data-table">
@@ -80,7 +99,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="log in logs" :key="log.id">
+          <tr v-for="log in filteredLogs" :key="log.id">
             <td class="font-mono">#{{ log.id }}</td>
             <td class="font-bold highlight-text">{{ log.vehicle_id }}</td>
             <td>{{ log.description }}</td>
@@ -103,7 +122,7 @@
               <span v-else class="text-completed">Completed</span>
             </td>
           </tr>
-          <tr v-if="logs.length === 0">
+          <tr v-if="filteredLogs.length === 0">
             <td colspan="7" class="text-center empty-row">No maintenance logs found.</td>
           </tr>
         </tbody>
@@ -113,7 +132,7 @@
     <!-- Mobile Viewports (Expandable Accordions: hidden on md and above) -->
     <div class="mobile-accordion-list block md:hidden">
       <div 
-        v-for="log in logs" 
+        v-for="log in filteredLogs" 
         :key="'mobile-log-' + log.id" 
         class="card mobile-accordion-card"
         :class="{ expanded: expandedLogs.includes(log.id) }"
@@ -153,7 +172,7 @@
           </div>
         </div>
       </div>
-      <div v-if="logs.length === 0" class="card empty-row">
+      <div v-if="filteredLogs.length === 0" class="card empty-row">
         No maintenance logs found.
       </div>
     </div>
@@ -162,7 +181,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
-import { Wrench } from '@lucide/vue';
+import { Wrench, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
 import { useApiResource } from '../composables/useApiResource';
 
@@ -171,12 +190,23 @@ const { showToast } = useToast();
 const showLogForm = ref(false);
 const isSubmitting = ref(false);
 const expandedLogs = ref([]);
+const searchQuery = ref('');
+const filterStatus = ref('All');
 
 const { data: apiVehicles, fetch: fetchVehicles } = useApiResource('/vehicles');
 const { data: apiLogs, fetch: fetchLogs, create: createLog } = useApiResource('/maintenance');
 
 const vehicles = computed(() => apiVehicles.value || []);
 const logs = computed(() => apiLogs.value || []);
+
+const filteredLogs = computed(() => {
+  return logs.value.filter(log => {
+    const matchesSearch = log.vehicle_id.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                          log.description.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchesStatus = filterStatus.value === 'All' || log.status === filterStatus.value;
+    return matchesSearch && matchesStatus;
+  });
+});
 
 onMounted(() => {
   fetchVehicles();
