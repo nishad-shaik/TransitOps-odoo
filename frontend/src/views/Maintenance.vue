@@ -1,5 +1,6 @@
 <template>
   <div class="maintenance-container">
+    <!-- Page Header -->
     <div class="page-header">
       <div>
         <h1>Maintenance Log</h1>
@@ -10,7 +11,7 @@
       </button>
     </div>
 
-    <!-- Info banner containing maintenance status change rules -->
+    <!-- Rule Banner -->
     <div class="info-banner">
       <span class="info-icon">🔧</span>
       <p><strong>Status Transition Rule:</strong> Registering an active maintenance record automatically flips the vehicle to <strong>In Shop</strong> (removed from the dispatch pool). Closing the record returns the vehicle to <strong>Available</strong>.</p>
@@ -79,12 +80,12 @@
         <tbody>
           <tr v-for="log in logs" :key="log.id">
             <td class="font-mono">#{{ log.id }}</td>
-            <td class="font-bold">{{ log.vehicle }}</td>
+            <td class="font-bold highlight-text">{{ log.vehicle }}</td>
             <td>{{ log.serviceType }}</td>
-            <td>${{ log.cost.toLocaleString() }}</td>
+            <td class="font-bold">${{ log.cost.toLocaleString() }}</td>
             <td>{{ log.date }}</td>
             <td>
-              <span class="status-badge" :class="log.status.toLowerCase()">
+              <span class="badge" :class="statusBadgeClass(log.status)">
                 {{ log.status }}
               </span>
             </td>
@@ -96,7 +97,7 @@
               >
                 Close Log
               </button>
-              <span v-else class="text-muted">Completed</span>
+              <span v-else class="text-completed">Completed</span>
             </td>
           </tr>
           <tr v-if="logs.length === 0">
@@ -132,6 +133,10 @@ const newLog = reactive({
   status: 'Active'
 });
 
+const statusBadgeClass = (status) => {
+  return status === 'Active' ? 'badge-warning' : 'badge-success';
+};
+
 const saveMaintenanceLog = () => {
   const newId = logs.value.length > 0 ? Math.max(...logs.value.map(l => l.id)) + 1 : 201;
   logs.value.unshift({
@@ -143,7 +148,6 @@ const saveMaintenanceLog = () => {
     status: newLog.status
   });
 
-  // Flip vehicle status if logged as active
   const targetVehicle = vehicles.value.find(v => v.regNo === newLog.vehicle);
   if (targetVehicle && newLog.status === 'Active') {
     targetVehicle.status = 'In Shop';
@@ -151,7 +155,6 @@ const saveMaintenanceLog = () => {
 
   showLogForm.value = false;
 
-  // Reset
   newLog.vehicle = '';
   newLog.serviceType = '';
   newLog.cost = 0;
@@ -160,7 +163,6 @@ const saveMaintenanceLog = () => {
 
 const closeLog = (log) => {
   log.status = 'Closed';
-  // Revert vehicle back to Available
   const targetVehicle = vehicles.value.find(v => v.regNo === log.vehicle);
   if (targetVehicle) {
     targetVehicle.status = 'Available';
@@ -182,39 +184,45 @@ const closeLog = (log) => {
 }
 
 .page-header h1 {
+  font-size: 2.25rem;
   margin: 0;
-  font-size: 1.75rem;
-  color: var(--text-h);
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
 }
 
 .info-banner {
-  background-color: rgba(170, 59, 255, 0.05);
-  border: 1px solid rgba(170, 59, 255, 0.2);
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
+  background-color: var(--primary-glow);
+  border: 1px solid rgba(170, 59, 255, 0.15);
+  padding: 1rem 1.25rem;
+  border-radius: var(--border-radius-md);
   display: flex;
   gap: 0.75rem;
-  align-items: flex-start;
-  font-size: 0.85rem;
-  color: var(--text-h);
+  align-items: center;
+  font-size: 0.9rem;
 }
 
-.info-banner p {
-  margin: 0;
+.info-icon {
+  color: var(--primary);
+  font-size: 1.1rem;
 }
 
-.card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  box-shadow: var(--shadow);
+.form-card {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .form-row {
@@ -224,33 +232,6 @@ const closeLog = (log) => {
   margin-bottom: 1rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.form-group label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.form-group input,
-.form-group select {
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
-  outline: none;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  border-color: var(--accent);
-}
-
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -258,98 +239,40 @@ const closeLog = (log) => {
   margin-top: 1rem;
 }
 
-.table-card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  box-shadow: var(--shadow);
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.data-table th,
-.data-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.data-table th {
-  color: var(--text);
-  font-weight: 600;
-  background-color: var(--social-bg);
-}
-
-.data-table td {
-  color: var(--text-h);
-}
-
 .font-mono {
   font-family: var(--mono);
 }
 
 .font-bold {
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.status-badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-}
-
-.status-badge.active {
-  background-color: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-}
-
-.status-badge.closed {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.btn-primary {
-  padding: 0.5rem 1rem;
-  background-color: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-secondary {
-  padding: 0.5rem 1rem;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text-h);
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
+.highlight-text {
+  color: #fff;
 }
 
 .btn-text {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--primary);
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
 }
 
-.text-muted {
-  color: var(--text);
-  font-size: 0.8rem;
+.btn-text:hover {
+  color: var(--primary-hover);
+}
+
+.text-completed {
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .empty-row {
-  color: var(--text);
-  padding: 2rem;
+  color: var(--text-secondary);
+  padding: 3rem;
+  text-align: center;
 }
 </style>

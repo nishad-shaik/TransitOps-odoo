@@ -1,5 +1,6 @@
 <template>
   <div class="expenses-container">
+    <!-- Page Header -->
     <div class="page-header">
       <div>
         <h1>Fuel &amp; Expenses</h1>
@@ -11,20 +12,23 @@
       </div>
     </div>
 
-    <!-- Live Cost Rollup Metric Panel -->
+    <!-- Live Cost Rollup Metric Card -->
     <div class="cost-rollup-card">
       <div class="rollup-metric">
         <span class="label">Total Operational Cost (Rollup)</span>
         <span class="value">${{ totalOperationalCost.toLocaleString() }}</span>
         <span class="subtext">Auto-computed: Fuel Cost + Maintenance Service Costs</span>
       </div>
+      <div class="glow-orb"></div>
     </div>
 
+    <!-- Tables Grid -->
     <div class="expense-grids">
       <!-- Fuel Logs Table Card -->
       <div class="card grid-card">
         <div class="card-header">
           <h3>Fuel Logs</h3>
+          <p class="card-subtitle font-bold">Fuel card fill receipts</p>
         </div>
         <table class="data-table">
           <thead>
@@ -37,10 +41,10 @@
           </thead>
           <tbody>
             <tr v-for="log in fuelLogs" :key="log.id">
-              <td class="font-bold">{{ log.vehicle }}</td>
+              <td class="font-bold highlight-text">{{ log.vehicle }}</td>
               <td>{{ log.date }}</td>
-              <td>{{ log.liters }} L</td>
-              <td>${{ log.cost.toLocaleString() }}</td>
+              <td class="font-bold">{{ log.liters }} L</td>
+              <td class="font-bold">${{ log.cost.toLocaleString() }}</td>
             </tr>
           </tbody>
         </table>
@@ -50,6 +54,7 @@
       <div class="card grid-card">
         <div class="card-header">
           <h3>Other Expenses</h3>
+          <p class="card-subtitle font-bold">Tolls, maintenance, and fees</p>
         </div>
         <table class="data-table">
           <thead>
@@ -64,7 +69,7 @@
           </thead>
           <tbody>
             <tr v-for="exp in expenses" :key="exp.id">
-              <td class="font-mono">#{{ exp.tripId }}</td>
+              <td class="font-mono highlight-text">#{{ exp.tripId }}</td>
               <td class="font-bold">{{ exp.vehicle }}</td>
               <td>${{ exp.tolls }}</td>
               <td>${{ exp.other }}</td>
@@ -74,17 +79,20 @@
                 </span>
                 <span v-else class="text-muted">None</span>
               </td>
-              <td class="font-bold">${{ (exp.tolls + exp.other).toLocaleString() }}</td>
+              <td class="font-bold highlight-text">${{ (exp.tolls + exp.other).toLocaleString() }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Modals for adding entries -->
-    <div v-if="showFuelModal" class="modal-overlay">
+    <!-- Modals -->
+    <div v-if="showFuelModal" class="modal-overlay" @click.self="showFuelModal = false">
       <div class="modal">
-        <h3>Log Fuel Fill</h3>
+        <div class="modal-header">
+          <h3>Log Fuel Fill</h3>
+          <button @click="showFuelModal = false" class="close-btn">&times;</button>
+        </div>
         <form @submit.prevent="saveFuelLog">
           <div class="form-group">
             <label>Vehicle</label>
@@ -112,9 +120,12 @@
       </div>
     </div>
 
-    <div v-if="showExpenseModal" class="modal-overlay">
+    <div v-if="showExpenseModal" class="modal-overlay" @click.self="showExpenseModal = false">
       <div class="modal">
-        <h3>Add Operational Expense</h3>
+        <div class="modal-header">
+          <h3>Add Operational Expense</h3>
+          <button @click="showExpenseModal = false" class="close-btn">&times;</button>
+        </div>
         <form @submit.prevent="saveExpense">
           <div class="form-row">
             <div class="form-group">
@@ -165,11 +176,10 @@ const fuelLogs = ref([
 const expenses = ref([
   { id: 1, tripId: 1045, vehicle: 'VAN-05', tolls: 15, other: 5, maintId: null },
   { id: 2, tripId: 1044, vehicle: 'TRK-02', tolls: 85, other: 24, maintId: null },
-  { id: 3, vehicle: 'VAN-02', tolls: 0, other: 0, maintId: 201 } // Linked maint expense
+  { id: 3, vehicle: 'VAN-02', tolls: 0, other: 0, maintId: 201 }
 ]);
 
-// Simulated Maintenance costs (from our Maintenance.vue mockup logs: Active record costs 450, closed cost 150)
-const simulatedMaintenanceCost = 600; 
+const simulatedMaintenanceCost = 600;
 
 const totalOperationalCost = computed(() => {
   const fuelTotal = fuelLogs.value.reduce((acc, log) => acc + log.cost, 0);
@@ -220,7 +230,7 @@ const saveExpense = () => {
 .expenses-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.75rem;
 }
 
 .page-header {
@@ -230,161 +240,118 @@ const saveExpense = () => {
 }
 
 .page-header h1 {
+  font-size: 2.25rem;
   margin: 0;
-  font-size: 1.75rem;
-  color: var(--text-h);
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
 }
 
 .actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .cost-rollup-card {
-  background: linear-gradient(135deg, #aa3bff 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
   color: white;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  box-shadow: var(--shadow);
+  padding: 2.25rem;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-primary);
+  position: relative;
+  overflow: hidden;
 }
 
 .rollup-metric {
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  z-index: 2;
 }
 
 .rollup-metric .label {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   opacity: 0.9;
 }
 
 .rollup-metric .value {
-  font-size: 2.25rem;
+  font-size: 3rem;
   font-weight: 800;
   margin: 0.5rem 0;
+  letter-spacing: -0.03em;
 }
 
 .rollup-metric .subtext {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   opacity: 0.8;
+}
+
+.glow-orb {
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
 }
 
 .expense-grids {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-
-.card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  box-shadow: var(--shadow);
+  gap: 1.75rem;
 }
 
 .card-header h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-h);
+  margin: 0;
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.data-table th,
-.data-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.data-table th {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.data-table td {
-  color: var(--text-h);
+.card-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
 }
 
 .font-mono { font-family: var(--mono); }
-.font-bold { font-weight: 600; }
-.text-muted { color: var(--text); font-style: italic; }
+.font-bold { font-weight: 700; }
+.highlight-text { color: #fff; }
+
+.text-muted {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.85rem;
+}
 
 .maint-link {
   font-size: 0.8rem;
-  background-color: rgba(170, 59, 255, 0.1);
-  color: var(--accent);
-  padding: 0.15rem 0.3rem;
-  border-radius: 0.25rem;
+  background-color: var(--primary-glow);
+  color: var(--primary);
+  border: 1px solid rgba(170, 59, 255, 0.2);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 700;
 }
 
-.btn-primary {
-  padding: 0.5rem 1rem;
-  background-color: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-secondary {
-  padding: 0.5rem 1rem;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text-h);
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* Modal styling */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+/* Modal Headers */
+.modal-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  margin-bottom: 1.5rem;
 }
 
-.modal {
-  background-color: var(--bg);
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border);
-}
-
-.modal h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-h);
-}
-
-.form-group {
-  margin-bottom: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
 }
 
 .form-row {
@@ -393,34 +360,7 @@ const saveExpense = () => {
   gap: 1rem;
 }
 
-.modal label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.modal input,
-.modal select {
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
-  outline: none;
-}
-
-.modal input:focus {
-  border-color: var(--accent);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-@media (max-width: 768px) {
+@media (max-width: 1000px) {
   .expense-grids {
     grid-template-columns: 1fr;
   }
