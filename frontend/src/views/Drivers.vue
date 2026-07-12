@@ -43,126 +43,97 @@
       </div>
     </div>
 
-    <!-- Drivers Table (Desktop Only: md and above) -->
-    <div class="table-card hidden md:block">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Driver Name</th>
-            <th>License No.</th>
-            <th>Category</th>
-            <th>Expiry Date</th>
-            <th>Contact</th>
-            <th>Trip Compl. %</th>
-            <th>Safety Score</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="driver in filteredDrivers" :key="driver.id">
-            <td class="highlight-text">{{ driver.name }}</td>
-            <td class="font-mono">{{ driver.license_number }}</td>
-            <td>
-              <span class="type-tag">{{ driver.license_category }}</span>
-            </td>
-            <td>
-              <div :class="{ 'text-expired': isExpired(driver.license_expiry_date) }">
-                {{ driver.license_expiry_date }}
-                <span v-if="isExpired(driver.license_expiry_date)" class="expiry-flag">EXPIRED</span>
-              </div>
-            </td>
-            <td>{{ driver.contact_number }}</td>
-            <td class="font-bold">{{ driver.tripCompletionRate }}%</td>
-            <td>
-              <span class="safety-badge" :class="getSafetyClass(driver.safety_score)">
-                {{ driver.safety_score }}/100
-              </span>
-            </td>
-            <td>
-              <span class="badge" :class="statusBadgeClass(driver.status)">
-                {{ driver.status }}
-              </span>
-            </td>
-            <td>
-              <button
-                @click="toggleStatus(driver)"
-                class="btn-text"
-                :disabled="driver.status === 'On Trip' || isSubmitting"
-              >
-                Toggle Status
-              </button>
-            </td>
-          </tr>
-          <tr v-if="filteredDrivers.length === 0">
-            <td colspan="9" class="text-center empty-row">No drivers found matching criteria.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Mobile Viewports Accordion Grid (Mobile Layouts: hidden on md and above) -->
-    <div class="mobile-accordion-list block md:hidden">
-      <div 
-        v-for="driver in filteredDrivers" 
-        :key="'mobile-dr-' + driver.id" 
-        class="card mobile-accordion-card"
-        :class="{ expanded: expandedDriverLicenses.includes(driver.license_number) }"
-      >
-        <!-- Accordion Header: 3 Vital columns only -->
-        <div class="accordion-header" @click="toggleDriverAccordion(driver.license_number)">
-          <div class="vital-col font-bold text-white">{{ driver.name }}</div>
-          <div class="vital-col">
-            <span class="badge" :class="statusBadgeClass(driver.status)">
-              {{ driver.status }}
-            </span>
+    <!-- High-Density Split-Pane Operations Console (Desktop and Tablet Viewports) -->
+    <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 mt-4 h-[calc(100vh-210px)] overflow-hidden">
+      <!-- Left Column: 40% (4 grid cols) - Scrollable Asset Stream -->
+      <div class="lg:col-span-4 flex flex-col h-full overflow-y-auto space-y-3 pr-2 scrollable-stream">
+        <div 
+          v-for="driver in filteredDrivers" 
+          :key="driver.id"
+          @click="selectDriver(driver)"
+          class="p-4 rounded-lg bg-[#1A1C26] border cursor-pointer transition-all duration-300 ease-in-out hover:translate-y-[-2px] hover:shadow-lg flex flex-col justify-between"
+          :class="selectedDriver?.id === driver.id ? 'border-[#2563EB] shadow-lg shadow-blue-500/10' : 'border-[#2D3142]'"
+        >
+          <div class="flex justify-between items-start mb-2">
+            <span class="font-bold text-white text-base">{{ driver.name }}</span>
+            <span class="badge" :class="statusBadgeClass(driver.status)">{{ driver.status }}</span>
           </div>
-          <div class="vital-col text-right pr-4">
-            <span class="safety-badge" :class="getSafetyClass(driver.safety_score)">
-              {{ driver.safety_score }}/100
-            </span>
+          <div class="flex justify-between items-center text-xs text-[#94A3B8]">
+            <span class="font-mono">{{ driver.license_number }}</span>
+            <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white font-mono text-[10px] uppercase tracking-widest">{{ driver.license_category }}</span>
           </div>
-          <span class="chevron">&#9662;</span>
         </div>
-
-        <!-- Expanded Accordion Content -->
-        <div class="accordion-content" v-if="expandedDriverLicenses.includes(driver.license_number)">
-          <div class="meta-row">
-            <span class="lbl">License No:</span>
-            <span class="val font-mono">{{ driver.license_number }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="lbl">Category:</span>
-            <span class="val">{{ driver.license_category }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="lbl">Expiry Date:</span>
-            <span class="val" :class="{ 'text-expired': isExpired(driver.license_expiry_date) }">
-              {{ driver.license_expiry_date }}
-              <span v-if="isExpired(driver.license_expiry_date)" class="expiry-flag ml-1">EXPIRED</span>
-            </span>
-          </div>
-          <div class="meta-row">
-            <span class="lbl">Contact:</span>
-            <span class="val font-mono">{{ driver.contact_number }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="lbl">Trip Completion:</span>
-            <span class="val font-bold">{{ driver.tripCompletionRate }}%</span>
-          </div>
-          <div class="meta-row action-row">
-            <button
-              @click="toggleStatus(driver)"
-              class="btn-sm btn-accent"
-              :disabled="driver.status === 'On Trip' || isSubmitting"
-            >
-              Toggle Status
-            </button>
-          </div>
+        <div v-if="filteredDrivers.length === 0" class="text-center p-8 text-[#94A3B8] bg-[#1A1C26] rounded-lg border border-[#2D3142]">
+          No driver profiles match current filters
         </div>
       </div>
-      <div v-if="filteredDrivers.length === 0" class="card empty-row">
-        No drivers found matching criteria.
+
+      <!-- Right Column: 60% (6 grid cols) - Deep Inspection Console -->
+      <div class="lg:col-span-6 flex flex-col h-full bg-[#1A1C26] border border-[#2D3142] rounded-lg overflow-hidden">
+        <div v-if="selectedDriver" class="flex flex-col h-full">
+          <!-- Console Header -->
+          <div class="p-6 border-b border-[#2D3142] bg-[#1A1C26] flex justify-between items-center">
+            <div>
+              <span class="text-[10px] uppercase tracking-widest font-mono text-[#2563EB] font-bold">Driver Compliance Record</span>
+              <h2 class="text-2xl font-bold text-white font-display mt-0.5">{{ selectedDriver.name }}</h2>
+              <p class="text-xs text-[#94A3B8] font-mono tracking-wider">License: {{ selectedDriver.license_number }} ({{ selectedDriver.license_category }})</p>
+            </div>
+            <button 
+              @click="toggleStatus(selectedDriver)" 
+              class="btn-primary" 
+              :disabled="selectedDriver.status === 'On Trip' || isSubmitting"
+            >
+              Toggle Duty Status
+            </button>
+          </div>
+
+          <!-- Console Body / Metadata Grid -->
+          <div class="p-6 flex-1 overflow-y-auto space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Contact Phone</label>
+                <span class="font-mono text-lg font-bold text-white">{{ selectedDriver.contact_number }}</span>
+              </div>
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">License Expiry</label>
+                <span 
+                  class="font-mono text-lg font-bold text-white flex items-center gap-1.5"
+                  :class="{ 'text-[#FF3B30]': isExpired(selectedDriver.license_expiry_date) }"
+                >
+                  {{ selectedDriver.license_expiry_date }}
+                  <span v-if="isExpired(selectedDriver.license_expiry_date)" class="px-1.5 py-0.5 text-[9px] bg-[#FF3B30]/10 border border-[#FF3B30]/20 rounded text-[#FF3B30] font-bold">EXPIRED</span>
+                </span>
+              </div>
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Trip Completion Rate</label>
+                <span class="text-lg font-bold text-white tracking-wide">{{ selectedDriver.tripCompletionRate || 100 }}%</span>
+              </div>
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Duty Status</label>
+                <span class="badge mt-1 inline-block" :class="statusBadgeClass(selectedDriver.status)">
+                  {{ selectedDriver.status }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Horizontal Safety Score Gauge Bar -->
+            <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142] space-y-3">
+              <div class="flex justify-between items-center text-xs">
+                <span class="font-mono text-[#94A3B8] uppercase tracking-widest">Driver Safety Index</span>
+                <span class="font-mono font-bold text-white" :class="getSafetyClass(selectedDriver.safety_score)">{{ selectedDriver.safety_score }} / 100</span>
+              </div>
+              <div class="h-8 w-full bg-[#1A1C26] border border-[#2D3142] rounded overflow-hidden relative flex items-center justify-center">
+                <div class="absolute left-0 top-0 h-full bg-[#2563EB] transition-all duration-500 ease-out" :style="{ width: selectedDriver.safety_score + '%' }"></div>
+                <span class="absolute text-xs font-mono font-bold text-white z-10">{{ selectedDriver.safety_score }}% DRIVER SCORE RATING</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="flex flex-col items-center justify-center h-full text-[#94A3B8] p-8">
+          <Info class="h-12 w-12 text-[#2D3142] mb-3" />
+          <p class="font-display font-medium text-slate-400">No Driver Selected</p>
+          <p class="text-xs text-slate-500 mt-1">Select a driver compliance record from the stream list to inspect compliance stats</p>
+        </div>
       </div>
     </div>
 
@@ -219,8 +190,8 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue';
-import { AlertTriangle, Search } from '@lucide/vue';
+import { ref, computed, reactive, onMounted, watch } from 'vue';
+import { AlertTriangle, Info, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
 import { useApiResource } from '../composables/useApiResource';
 
@@ -231,7 +202,7 @@ const filterStatus = ref('All');
 const filterCompliance = ref('All');
 const showAddModal = ref(false);
 const isSubmitting = ref(false);
-const expandedDriverLicenses = ref([]);
+const selectedDriver = ref(null);
 
 const { data: apiDrivers, fetch: fetchDrivers, create: createDriver } = useApiResource('/drivers');
 const drivers = computed(() => apiDrivers.value || []);
@@ -239,6 +210,20 @@ const drivers = computed(() => apiDrivers.value || []);
 onMounted(() => {
   fetchDrivers();
 });
+
+const selectDriver = (d) => {
+  selectedDriver.value = d;
+};
+
+watch(filteredDrivers, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    if (!selectedDriver.value || !newVal.some(x => x.id === selectedDriver.value.id)) {
+      selectedDriver.value = newVal[0];
+    }
+  } else {
+    selectedDriver.value = null;
+  }
+}, { immediate: true });
 
 const newDriver = reactive({
   name: '',
