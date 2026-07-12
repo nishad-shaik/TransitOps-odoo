@@ -34,6 +34,8 @@ class UserRole(str, enum.Enum):
     dispatcher = "Dispatcher"
     driver = "Driver"
     mechanic = "Mechanic"
+    safety_officer = "Safety Officer"
+    financial_analyst = "Financial Analyst"
 
 class VehicleStatus(str, enum.Enum):
     available = "Available"

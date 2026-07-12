@@ -21,13 +21,14 @@
       </div>
     </div>
 
-    <!-- KPI Cards Grid with Interactive Action Straps -->
-    <div class="kpi-grid">
+    <!-- Bento Grid matrix holding metric cards -->
+    <div class="bento-grid">
       <div 
-        class="kpi-card cursor-pointer" 
+        class="kpi-card cursor-pointer bento-card-span-1" 
         v-for="kpi in kpis" 
         :key="kpi.title"
         @click="handleKpiClick(kpi.title)"
+        :class="{ 'bento-card-span-2': kpi.title === 'Fleet Utilization', 'border-[#06B6D4]': activeKpiFilter === kpi.filterVal }"
       >
         <div class="kpi-header">
           <component :is="kpi.icon" class="kpi-icon-svg text-primary" />
@@ -127,7 +128,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
-import { Compass, Hourglass, BarChart3 } from '@lucide/vue';
+import { Compass, Hourglass, BarChart3, Wrench } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
 import { useApiResource } from '../../composables/useApiResource';
 
@@ -141,27 +142,33 @@ const filters = reactive({
 const activeKpiFilter = ref('All');
 
 const { data: statsData, fetch: fetchStats } = useApiResource('/dashboard/stats');
+const { data: apiVehicles, fetch: fetchVehicles } = useApiResource('/vehicles');
 
 onMounted(() => {
   fetchStats();
+  fetchVehicles();
 });
 
 const kpis = computed(() => [
-  { title: 'Active Trips', value: String(statsData.value?.activeTrips ?? 0), subtext: 'On road. Click to filter.', icon: Compass },
-  { title: 'Pending Trips', value: String(statsData.value?.pendingTrips ?? 0), subtext: 'Awaiting dispatch. Click to filter.', icon: Hourglass },
-  { title: 'Fleet Utilization', value: statsData.value?.utilizationRate ?? '0%', subtext: 'Click to reset filter', icon: BarChart3 }
+  { title: 'Active Trips', value: String(statsData.value?.activeTrips ?? 0), subtext: 'Click to filter ongoing', icon: Compass, filterVal: 'Dispatched' },
+  { title: 'Pending Trips', value: String(statsData.value?.pendingTrips ?? 0), subtext: 'Click to filter pending', icon: Hourglass, filterVal: 'Draft' },
+  { title: 'In Shop Vehicles', value: String(statsData.value?.distribution?.maintenance ?? 0), subtext: 'Click to filter workshop', icon: Wrench, filterVal: 'In Shop' },
+  { title: 'Fleet Utilization', value: statsData.value?.utilizationRate ?? '0%', subtext: 'Click to reset filter', icon: BarChart3, filterVal: 'All' }
 ]);
 
 const handleKpiClick = (title) => {
   if (title === 'Active Trips') {
     activeKpiFilter.value = 'Dispatched';
-    showToast('KPI Filter Applied: Showing Dispatched Trips', 'info');
+    showToast('KPI Filter: Showing Dispatched/Ongoing Trips', 'info');
   } else if (title === 'Pending Trips') {
     activeKpiFilter.value = 'Draft';
-    showToast('KPI Filter Applied: Showing Draft Trips', 'info');
+    showToast('KPI Filter: Showing Draft/Scheduled Trips', 'info');
+  } else if (title === 'In Shop Vehicles') {
+    activeKpiFilter.value = 'In Shop';
+    showToast('KPI Filter: Showing In Shop/Maintenance Vehicles', 'info');
   } else {
     activeKpiFilter.value = 'All';
-    showToast('KPI Filter Reset: Showing all logs', 'info');
+    showToast('KPI Filter Reset: Showing all dispatches', 'info');
   }
 };
 
@@ -176,8 +183,14 @@ const distributionPercent = (key) => {
 
 const filteredRecentTrips = computed(() => {
   return recentTrips.value.filter(trip => {
-    if (activeKpiFilter.value !== 'All') {
-      return trip.status === activeKpiFilter.value;
+    if (activeKpiFilter.value === 'Dispatched') {
+      return trip.status === 'Dispatched' || trip.status === 'Completed' || trip.status === 'Ongoing';
+    }
+    if (activeKpiFilter.value === 'Draft') {
+      return trip.status === 'Draft' || trip.status === 'Scheduled';
+    }
+    if (activeKpiFilter.value === 'In Shop') {
+      return trip.vehicle_id && (apiVehicles.value || []).find(v => v.registration_number === trip.vehicle_id)?.status === 'In Shop';
     }
     const matchesType = filters.type === 'All' || trip.type === filters.type;
     const matchesStatus = filters.status === 'All' || trip.status === filters.status;
@@ -186,7 +199,7 @@ const filteredRecentTrips = computed(() => {
 });
 
 const badgeClass = (status) => {
-  if (status === 'Dispatched') return 'badge-info';
+  if (status === 'Dispatched' || status === 'Ongoing') return 'badge-info';
   if (status === 'Completed') return 'badge-success';
   if (status === 'Draft') return 'badge-warning';
   return 'badge-danger';
@@ -234,10 +247,24 @@ const badgeClass = (status) => {
   transition: border-color 0.2s ease;
 }
 
-.kpi-grid {
+.bento-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.25rem;
+}
+
+.bento-card-span-1 {
+  grid-column: span 1;
+}
+
+.bento-card-span-2 {
+  grid-column: span 1; /* Fallback for small screens */
+}
+
+@media (min-width: 768px) {
+  .bento-card-span-2 {
+    grid-column: span 2;
+  }
 }
 
 .kpi-card {
