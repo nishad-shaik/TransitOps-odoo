@@ -36,7 +36,8 @@ def hash_password(password: str) -> str:
 
 def get_engine():
     db_url = os.environ.get("DATABASE_URL", DEFAULT_DB_URL)
-    return create_engine(db_url, echo=False, future=True, pool_pre_ping=True, pool_recycle=280)
+    connect_args = {"check_same_thread": False} if "sqlite" in db_url else {}
+    return create_engine(db_url, echo=False, future=True, connect_args=connect_args)
 
 
 def init_schema(engine, drop_first: bool = False):
