@@ -38,14 +38,14 @@ onMounted(() => {
 });
 
 const allLinks = [
-  { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst', 'Driver'] },
-  { path: '/vehicles', label: 'Fleet Registry', icon: '🚚', roles: ['Fleet Manager', 'Dispatcher', 'Financial Analyst'] },
-  { path: '/drivers', label: 'Drivers & Safety', icon: '👤', roles: ['Fleet Manager', 'Safety Officer'] },
-  { path: '/trips', label: 'Trip Dispatcher', icon: '🗺️', roles: ['Dispatcher', 'Safety Officer', 'Driver'] },
-  { path: '/maintenance', label: 'Maintenance Log', icon: '🔧', roles: ['Fleet Manager'] },
-  { path: '/fuel-expenses', label: 'Fuel & Expenses', icon: '💳', roles: ['Financial Analyst'] },
-  { path: '/analytics', label: 'Reports & ROI', icon: '📈', roles: ['Fleet Manager', 'Financial Analyst'] },
-  { path: '/settings', label: 'Settings', icon: '⚙️', roles: ['Fleet Manager'] }
+  { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst', 'Driver', 'Developer'] },
+  { path: '/vehicles', label: 'Fleet Registry', icon: '🚚', roles: ['Fleet Manager', 'Dispatcher', 'Financial Analyst', 'Developer'] },
+  { path: '/drivers', label: 'Drivers & Safety', icon: '👤', roles: ['Fleet Manager', 'Safety Officer', 'Developer'] },
+  { path: '/trips', label: 'Trip Dispatcher', icon: '🗺️', roles: ['Dispatcher', 'Safety Officer', 'Driver', 'Developer'] },
+  { path: '/maintenance', label: 'Maintenance Log', icon: '🔧', roles: ['Fleet Manager', 'Developer'] },
+  { path: '/fuel-expenses', label: 'Fuel & Expenses', icon: '💳', roles: ['Financial Analyst', 'Developer'] },
+  { path: '/analytics', label: 'Reports & ROI', icon: '📈', roles: ['Fleet Manager', 'Financial Analyst', 'Developer'] },
+  { path: '/settings', label: 'Settings', icon: '⚙️', roles: ['Fleet Manager', 'Developer'] }
 ];
 
 const allowedLinks = computed(() => {

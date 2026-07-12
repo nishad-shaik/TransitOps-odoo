@@ -262,7 +262,8 @@ const handleLogin = async () => {
       'driver@transitops.dev': { password: 'password123', role: 'Driver' },
       'safety@transitops.dev': { password: 'password123', role: 'Safety Officer' },
       'finance@transitops.dev': { password: 'password123', role: 'Financial Analyst' },
-      'admin@transitops.dev': { password: 'password123', role: 'Fleet Manager' }
+      'admin@transitops.dev': { password: 'password123', role: 'Fleet Manager' },
+      'dev@transitops.dev': { password: 'password123', role: 'Developer' }
     };
 
     // Retrieve custom registered accounts
@@ -355,7 +356,7 @@ const handleRegister = async () => {
     }
 
     // Check duplicate
-    const isSeedEmail = ['fleetmanager@transitops.dev', 'driver@transitops.dev', 'safety@transitops.dev', 'finance@transitops.dev', 'admin@transitops.dev'].includes(cleanEmail);
+    const isSeedEmail = ['fleetmanager@transitops.dev', 'driver@transitops.dev', 'safety@transitops.dev', 'finance@transitops.dev', 'admin@transitops.dev', 'dev@transitops.dev'].includes(cleanEmail);
     const isRegisteredEmail = registeredAccounts.some(acc => acc.email === cleanEmail);
 
     if (isSeedEmail || isRegisteredEmail) {
