@@ -1,5 +1,6 @@
 <template>
   <div class="trips-container">
+    <!-- Page Header -->
     <div class="page-header">
       <div>
         <h1>Trip Dispatcher</h1>
@@ -64,7 +65,8 @@
 
         <!-- Live Business Validation Warning -->
         <div v-if="validationError" class="validation-warning">
-          ⚠️ {{ validationError }}
+          <span class="warning-icon">⚠️</span>
+          <span>{{ validationError }}</span>
         </div>
 
         <div class="form-actions">
@@ -79,13 +81,16 @@
     <!-- Trips Dashboard / Live Board -->
     <div class="trips-board">
       <div class="board-column">
-        <h3>Drafts</h3>
+        <div class="column-header">
+          <h3>Drafts</h3>
+          <span class="column-count">{{ getTripsByStatus('Draft').length }}</span>
+        </div>
         <div class="trip-cards">
           <div v-for="t in getTripsByStatus('Draft')" :key="t.id" class="trip-card draft">
             <div class="card-title">Trip #{{ t.id }}</div>
             <div class="route-info"><strong>Route:</strong> {{ t.source }} &rarr; {{ t.destination }}</div>
             <div class="details">Weight: {{ t.cargoWeight }}kg | Dist: {{ t.plannedDistance }}km</div>
-            <div class="notes text-muted">Awaiting vehicle &amp; driver assignment</div>
+            <div class="notes font-bold text-muted">Awaiting vehicle &amp; driver assignment</div>
             <div class="actions">
               <button @click="selectForEdit(t)" class="btn-sm btn-accent">Assign</button>
             </div>
@@ -95,7 +100,10 @@
       </div>
 
       <div class="board-column">
-        <h3>Dispatched</h3>
+        <div class="column-header">
+          <h3>Dispatched</h3>
+          <span class="column-count">{{ getTripsByStatus('Dispatched').length }}</span>
+        </div>
         <div class="trip-cards">
           <div v-for="t in getTripsByStatus('Dispatched')" :key="t.id" class="trip-card dispatched">
             <div class="card-title">Trip #{{ t.id }}</div>
@@ -115,7 +123,10 @@
       </div>
 
       <div class="board-column">
-        <h3>Completed</h3>
+        <div class="column-header">
+          <h3>Completed</h3>
+          <span class="column-count">{{ getTripsByStatus('Completed').length }}</span>
+        </div>
         <div class="trip-cards">
           <div v-for="t in getTripsByStatus('Completed')" :key="t.id" class="trip-card completed">
             <div class="card-title">Trip #{{ t.id }}</div>
@@ -124,7 +135,7 @@
               <div><strong>Vehicle:</strong> {{ t.vehicle }}</div>
               <div><strong>Driver:</strong> {{ t.driver }}</div>
             </div>
-            <div class="details text-success">Odometer updated: +{{ t.plannedDistance }}km</div>
+            <div class="details text-success font-bold">Odometer updated: +{{ t.plannedDistance }}km</div>
           </div>
           <div v-if="getTripsByStatus('Completed').length === 0" class="empty-state">No completed trips.</div>
         </div>
@@ -202,11 +213,9 @@ const dispatchTrip = () => {
   trips.value.push(dispatchedRecord);
   showCreateForm.value = false;
 
-  // Simulate updating vehicle/driver to 'On Trip' (they get filtered out of the selection lists)
   availableVehicles.value.splice(selectedVehicleIndex.value, 1);
   availableDrivers.value.splice(selectedDriverIndex.value, 1);
 
-  // Reset
   selectedVehicleIndex.value = -1;
   selectedDriverIndex.value = -1;
   newTrip.source = '';
@@ -217,7 +226,6 @@ const dispatchTrip = () => {
 
 const completeTrip = (trip) => {
   trip.status = 'Completed';
-  // Re-add mock vehicle/driver to available pools
   availableVehicles.value.push({ regNo: trip.vehicle, model: 'Restored vehicle', maxLoad: trip.cargoWeight + 200 });
   availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL', safetyScore: 85 });
 };
@@ -251,23 +259,29 @@ const selectForEdit = (trip) => {
 }
 
 .page-header h1 {
+  font-size: 2.25rem;
   margin: 0;
-  font-size: 1.75rem;
-  color: var(--text-h);
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
 }
 
-.card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  box-shadow: var(--shadow);
+.form-card {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .form-row {
@@ -277,41 +291,18 @@ const selectForEdit = (trip) => {
   margin-bottom: 1rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.form-group label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.form-group input,
-.form-group select {
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
-  outline: none;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  border-color: var(--accent);
-}
-
 .validation-warning {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-  padding: 0.75rem;
-  border-radius: 0.375rem;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+  background-color: var(--danger-glow);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  padding: 0.85rem 1rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
 }
 
 .form-actions {
@@ -327,19 +318,37 @@ const selectForEdit = (trip) => {
 }
 
 .board-column {
-  background-color: var(--social-bg);
-  padding: 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
-  min-height: 400px;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  padding: 1.25rem;
+  border-radius: var(--border-radius-lg);
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.board-column h3 {
-  margin: 0 0 1rem 0;
+.column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.column-header h3 {
   font-size: 1.1rem;
-  color: var(--text-h);
-  border-bottom: 2px solid var(--border);
-  padding-bottom: 0.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.column-count {
+  background-color: var(--border-color);
+  color: var(--text-primary);
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .trip-cards {
@@ -349,98 +358,97 @@ const selectForEdit = (trip) => {
 }
 
 .trip-card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  padding: 0.85rem;
-  box-shadow: var(--shadow);
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
-.trip-card.draft { border-left: 4px solid var(--border); }
-.trip-card.dispatched { border-left: 4px solid #3b82f6; }
-.trip-card.completed { border-left: 4px solid #10b981; }
+.trip-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
+}
+
+.trip-card.draft { border-left: 4px solid var(--text-muted); }
+.trip-card.dispatched { border-left: 4px solid var(--info); }
+.trip-card.completed { border-left: 4px solid var(--success); }
 
 .card-title {
-  font-weight: 700;
-  color: var(--text-h);
+  font-weight: 800;
+  color: #fff;
   margin-bottom: 0.5rem;
+  font-size: 0.95rem;
 }
 
 .route-info {
   font-size: 0.85rem;
-  margin-bottom: 0.25rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
 }
 
 .assignment {
   font-size: 0.8rem;
-  margin: 0.5rem 0;
-  padding: 0.4rem;
-  background-color: var(--social-bg);
-  border-radius: 0.25rem;
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  background-color: var(--panel-bg);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .details {
   font-size: 0.8rem;
-  color: var(--text);
+  color: var(--text-secondary);
 }
 
 .notes {
-  font-size: 0.75rem;
-  margin: 0.5rem 0;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
 }
 
-.font-bold { font-weight: 600; }
-.text-accent { color: var(--accent); }
-.text-success { color: #10b981; }
-.text-muted { color: var(--text); }
+.font-bold { font-weight: 700; }
+.text-accent { color: var(--primary); }
+.text-success { color: var(--success); }
+.text-muted { color: var(--text-muted); }
 
 .actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 }
 
 .btn-sm {
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.75rem;
   font-size: 0.75rem;
-  border-radius: 0.25rem;
+  border-radius: var(--border-radius-sm);
   border: none;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  transition: opacity 0.2s ease;
 }
 
-.btn-sm.btn-accent { background-color: var(--accent); color: white; }
-.btn-sm.btn-success { background-color: #10b981; color: white; }
-.btn-sm.btn-danger { background-color: #ef4444; color: white; }
+.btn-sm:hover {
+  opacity: 0.9;
+}
+
+.btn-sm.btn-accent { background-color: var(--primary); color: white; }
+.btn-sm.btn-success { background-color: var(--success); color: white; }
+.btn-sm.btn-danger { background-color: var(--danger); color: white; }
 
 .empty-state {
   text-align: center;
-  color: var(--text);
+  color: var(--text-muted);
   font-size: 0.85rem;
-  padding: 2rem 0;
+  padding: 3rem 0;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--border-radius-md);
 }
 
-.btn-primary {
-  padding: 0.5rem 1rem;
-  background-color: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-secondary {
-  padding: 0.5rem 1rem;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text-h);
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-@media (max-width: 768px) {
+@media (max-width: 950px) {
   .trips-board {
     grid-template-columns: 1fr;
   }
