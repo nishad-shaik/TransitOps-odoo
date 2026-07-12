@@ -1,5 +1,6 @@
 <template>
   <div class="dashboard-container">
+    <!-- Header Block -->
     <div class="page-header">
       <div>
         <h1>Dashboard</h1>
@@ -24,18 +25,27 @@
     <!-- KPI Cards Grid -->
     <div class="kpi-grid">
       <div class="kpi-card" v-for="kpi in kpis" :key="kpi.title">
-        <span class="kpi-label">{{ kpi.title }}</span>
-        <span class="kpi-value">{{ kpi.value }}</span>
-        <span class="kpi-subtext">{{ kpi.subtext }}</span>
+        <div class="kpi-header">
+          <span class="kpi-icon">{{ kpi.icon }}</span>
+          <span class="kpi-label">{{ kpi.title }}</span>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ kpi.value }}</span>
+          <span class="kpi-subtext">{{ kpi.subtext }}</span>
+        </div>
+        <div class="kpi-border"></div>
       </div>
     </div>
 
-    <!-- Main Content Layout -->
+    <!-- Main Content Layout Grid -->
     <div class="content-row">
       <!-- Recent Trips Table -->
       <div class="card recent-trips">
         <div class="card-header">
-          <h3>Recent Trips</h3>
+          <div>
+            <h3>Active &amp; Recent Dispatches</h3>
+            <p class="card-subtitle">Real-time status of dispatch operations</p>
+          </div>
           <router-link to="/trips" class="link-more">Manage Trips &rarr;</router-link>
         </div>
         <table class="data-table">
@@ -44,18 +54,18 @@
               <th>Trip ID</th>
               <th>Vehicle</th>
               <th>Driver</th>
-              <th>Cargo</th>
+              <th>Cargo Load</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="trip in recentTrips" :key="trip.id">
-              <td>#{{ trip.id }}</td>
+              <td class="font-mono">#{{ trip.id }}</td>
               <td>{{ trip.vehicle || 'Awaiting vehicle' }}</td>
               <td>{{ trip.driver || 'Awaiting driver' }}</td>
               <td>{{ trip.cargoWeight }} kg</td>
               <td>
-                <span class="badge" :class="trip.status.toLowerCase()">
+                <span class="badge" :class="badgeClass(trip.status)">
                   {{ trip.status }}
                 </span>
               </td>
@@ -66,7 +76,10 @@
 
       <!-- Fleet Distribution Chart/Proportional Bars -->
       <div class="card fleet-status">
-        <h3>Fleet Status Distribution</h3>
+        <div class="card-header">
+          <h3>Fleet Distribution</h3>
+          <p class="card-subtitle">Active vehicles status split</p>
+        </div>
         <div class="status-distribution">
           <div class="dist-bar">
             <div class="bar-segment available" style="width: 50%" title="Available: 50%"></div>
@@ -95,29 +108,36 @@ const filters = reactive({
 });
 
 const kpis = ref([
-  { title: 'Active Vehicles', value: '18', subtext: 'Out of 24 total' },
-  { title: 'Available Vehicles', value: '12', subtext: 'Ready for dispatch' },
-  { title: 'Vehicles in Maintenance', value: '3', subtext: 'Currently in shop' },
-  { title: 'Active Trips', value: '8', subtext: 'On road' },
-  { title: 'Pending Trips', value: '2', subtext: 'Awaiting dispatch' },
-  { title: 'Drivers On Duty', value: '15', subtext: 'Out of 20 total' },
-  { title: 'Fleet Utilization', value: '75%', subtext: 'Target is 85%' }
+  { title: 'Active Vehicles', value: '18', subtext: 'Out of 24 total', icon: '🚚' },
+  { title: 'Available Vehicles', value: '12', subtext: 'Ready for dispatch', icon: '✅' },
+  { title: 'Vehicles in Maintenance', value: '3', subtext: 'Currently in shop', icon: '🔧' },
+  { title: 'Active Trips', value: '8', subtext: 'On road', icon: '🗺️' },
+  { title: 'Pending Trips', value: '2', subtext: 'Awaiting dispatch', icon: '⏳' },
+  { title: 'Drivers On Duty', value: '15', subtext: 'Out of 20 total', icon: '👤' },
+  { title: 'Fleet Utilization', value: '75%', subtext: 'Target is 85%', icon: '📈' }
 ]);
 
 const recentTrips = ref([
-  { id: 1045, vehicle: 'Van-05', driver: 'Alex Johnson', cargoWeight: 450, status: 'Dispatched' },
-  { id: 1044, vehicle: 'Truck-02', driver: 'Sarah Connor', cargoWeight: 2200, status: 'Completed' },
-  { id: 1043, vehicle: 'Sedan-01', driver: 'Bruce Wayne', cargoWeight: 150, status: 'Completed' },
+  { id: 1045, vehicle: 'VAN-05', driver: 'Alex Johnson', cargoWeight: 450, status: 'Dispatched' },
+  { id: 1044, vehicle: 'TRK-02', driver: 'Sarah Connor', cargoWeight: 2200, status: 'Completed' },
+  { id: 1043, vehicle: 'SDN-01', driver: 'Bruce Wayne', cargoWeight: 350, status: 'Completed' },
   { id: 1042, vehicle: null, driver: null, cargoWeight: 800, status: 'Draft' },
-  { id: 1041, vehicle: 'Truck-04', driver: 'Clark Kent', cargoWeight: 1800, status: 'Cancelled' }
+  { id: 1041, vehicle: 'TRK-04', driver: 'Clark Kent', cargoWeight: 1800, status: 'Cancelled' }
 ]);
+
+const badgeClass = (status) => {
+  if (status === 'Dispatched') return 'badge-info';
+  if (status === 'Completed') return 'badge-success';
+  if (status === 'Draft') return 'badge-warning';
+  return 'badge-danger';
+};
 </script>
 
 <style scoped>
 .dashboard-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .page-header {
@@ -127,184 +147,181 @@ const recentTrips = ref([
 }
 
 .page-header h1 {
+  font-size: 2.25rem;
   margin: 0;
-  font-size: 1.75rem;
-  color: var(--text-h);
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
 }
 
 .filters {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .filters select {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--panel-bg);
+  color: var(--text-primary);
   font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.filters select:focus {
+  border-color: var(--primary);
 }
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1.25rem;
 }
 
 .kpi-card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  padding: 1rem;
-  border-radius: 0.5rem;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  border-radius: var(--border-radius-lg);
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-hover);
+}
+
+.kpi-card:hover .kpi-border {
+  opacity: 1;
+}
+
+.kpi-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.kpi-icon {
+  font-size: 1.25rem;
 }
 
 .kpi-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
+.kpi-body {
+  display: flex;
+  flex-direction: column;
+}
+
 .kpi-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-h);
-  margin: 0.25rem 0;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
 }
 
 .kpi-subtext {
-  font-size: 0.75rem;
-  color: var(--text);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.kpi-border {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary) 0%, #7c3aed 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .content-row {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
+  gap: 1.75rem;
 }
 
-.card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  box-shadow: var(--shadow);
+.card-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.card-header h3 {
-  margin: 0;
-  color: var(--text-h);
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
 }
 
 .link-more {
-  color: var(--accent);
+  color: var(--primary);
   text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
   font-size: 0.9rem;
+  font-weight: 700;
+  transition: color 0.2s ease;
 }
 
-.data-table th,
-.data-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.data-table th {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.data-table td {
-  color: var(--text-h);
-}
-
-.badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.badge.dispatched {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-}
-
-.badge.completed {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.badge.draft {
-  background-color: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
-}
-
-.badge.cancelled {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+.link-more:hover {
+  color: var(--primary-hover);
 }
 
 .status-distribution {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 .dist-bar {
   display: flex;
   height: 1.5rem;
-  border-radius: 0.375rem;
+  border-radius: var(--border-radius-sm);
   overflow: hidden;
+  border: 1px solid var(--border-color);
 }
 
 .bar-segment {
   height: 100%;
+  transition: width 0.3s ease;
 }
 
-.bar-segment.available { background-color: #10b981; }
-.bar-segment.ontrip { background-color: #3b82f6; }
-.bar-segment.inshop { background-color: #f59e0b; }
-.bar-segment.retired { background-color: #ef4444; }
+.bar-segment.available { background-color: var(--success); }
+.bar-segment.ontrip { background-color: var(--info); }
+.bar-segment.inshop { background-color: var(--warning); }
+.bar-segment.retired { background-color: var(--danger); }
 
 .dist-legend {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--text-h);
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-primary);
 }
 
 .dot {
@@ -314,12 +331,12 @@ const recentTrips = ref([
   display: inline-block;
 }
 
-.dot.available { background-color: #10b981; }
-.dot.ontrip { background-color: #3b82f6; }
-.dot.inshop { background-color: #f59e0b; }
-.dot.retired { background-color: #ef4444; }
+.dot.available { background-color: var(--success); }
+.dot.ontrip { background-color: var(--info); }
+.dot.inshop { background-color: var(--warning); }
+.dot.retired { background-color: var(--danger); }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .content-row {
     grid-template-columns: 1fr;
   }
