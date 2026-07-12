@@ -158,93 +158,93 @@
       </div>
     </div>
 
-    <!-- Trip Log History Grid (Desktop: Comprehensive table / Mobile: Condensed expandable accordion) -->
+    <!-- High-Density Split-Pane Operations Console (Desktop and Tablet Viewports) -->
     <div class="card grid-card mt-6">
       <div class="grid-header">
         <h3>Trip Log Registry</h3>
         <span class="row-count">Records: {{ trips.length }}</span>
       </div>
 
-      <!-- Desktop View (md and above) -->
-      <div class="table-wrapper hidden md:block">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Trip ID</th>
-              <th>Route</th>
-              <th>Vehicle</th>
-              <th>Driver</th>
-              <th>Cargo Weight</th>
-              <th>Distance</th>
-              <th>Status</th>
-              <th>ETA</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="t in trips" :key="t.id">
-              <td class="font-mono highlight-text">#{{ t.id }}</td>
-              <td>{{ t.source }} &rarr; {{ t.destination }}</td>
-              <td>{{ t.vehicle_id || 'Not assigned' }}</td>
-              <td>{{ t.driver_id || 'Not assigned' }}</td>
-              <td>{{ t.cargo_weight }} kg</td>
-              <td>{{ t.planned_distance }} km</td>
-              <td>
-                <span class="badge" :class="badgeClass(t.status)">
-                  {{ t.status }}
-                </span>
-              </td>
-              <td>{{ t.eta || 'N/A' }}</td>
-              <td>
-                <div class="flex-gap-2" v-if="t.status === 'Dispatched' || t.status === 'Ongoing'">
-                  <button @click="completeTrip(t)" class="btn-action-complete">Complete</button>
-                  <button @click="cancelTrip(t)" class="btn-action-cancel">Cancel</button>
-                </div>
-                <span v-else class="text-muted">-</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Mobile View (hidden on md and above) -->
-      <div class="mobile-accordion-list block md:hidden">
-        <div 
-          v-for="t in trips" 
-          :key="'mobile-trip-' + t.id" 
-          class="card mobile-accordion-card"
-          :class="{ expanded: expandedTrips.includes(t.id) }"
-        >
-          <!-- Accordion Header: 3 Vital columns only -->
-          <div class="accordion-header" @click="toggleTripAccordion(t.id)">
-            <div class="vital-col font-mono font-bold text-white">#{{ t.id }} - {{ t.driver_id || 'Unassigned' }}</div>
-            <div class="vital-col">
-              <span class="badge" :class="badgeClass(t.status)">
-                {{ t.status }}
-              </span>
+      <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 mt-4 h-[480px] overflow-hidden">
+        <!-- Left Column: 40% - Compact Trip Cards Stream -->
+        <div class="lg:col-span-4 flex flex-col h-full overflow-y-auto space-y-3 pr-2 scrollable-stream">
+          <div 
+            v-for="t in trips" 
+            :key="t.id"
+            @click="selectTrip(t)"
+            class="p-4 rounded-lg bg-[#1A1C26] border cursor-pointer transition-all duration-300 ease-in-out hover:translate-y-[-2px] hover:shadow-lg flex flex-col justify-between"
+            :class="selectedTrip?.id === t.id ? 'border-[#2563EB] shadow-lg shadow-blue-500/10' : 'border-[#2D3142]'"
+          >
+            <div class="flex justify-between items-start mb-2">
+              <span class="font-mono font-bold text-white text-base">Trip #{{ t.id }}</span>
+              <span class="badge" :class="badgeClass(t.status)">{{ t.status }}</span>
             </div>
-            <div class="vital-col text-right pr-4 font-bold">{{ t.planned_distance }} km</div>
-            <span class="chevron">&#9662;</span>
+            <div class="flex justify-between items-center text-xs text-[#94A3B8]">
+              <span class="font-medium text-slate-300">{{ t.source }} &rarr; {{ t.destination }}</span>
+              <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white font-mono text-[10px] uppercase tracking-widest">{{ t.planned_distance }} km</span>
+            </div>
           </div>
+          <div v-if="trips.length === 0" class="text-center p-8 text-[#94A3B8] bg-[#1A1C26] rounded-lg border border-[#2D3142]">
+            No trip dispatches logged in registry
+          </div>
+        </div>
 
-          <!-- Accordion Content -->
-          <div class="accordion-content" v-if="expandedTrips.includes(t.id)">
-            <div class="meta-row">
-              <span class="lbl">Route:</span>
-              <span class="val">{{ t.source }} &rarr; {{ t.destination }}</span>
+        <!-- Right Column: 60% - Deep Dispatch Inspection Panel -->
+        <div class="lg:col-span-6 flex flex-col h-full bg-[#1A1C26] border border-[#2D3142] rounded-lg overflow-hidden">
+          <div v-if="selectedTrip" class="flex flex-col h-full">
+            <!-- Header -->
+            <div class="p-6 border-b border-[#2D3142] bg-[#1A1C26] flex justify-between items-center">
+              <div>
+                <span class="text-[10px] uppercase tracking-widest font-mono text-[#2563EB] font-bold">Active Route Telemetry</span>
+                <h2 class="text-xl font-bold text-white font-display mt-0.5">{{ selectedTrip.source }} &rarr; {{ selectedTrip.destination }}</h2>
+                <p class="text-xs text-[#94A3B8] font-mono tracking-wider">Dispatched ID: #{{ selectedTrip.id }}</p>
+              </div>
+              
+              <div class="flex gap-2" v-if="selectedTrip.status === 'Dispatched' || selectedTrip.status === 'Ongoing'">
+                <button @click="completeTrip(selectedTrip)" class="btn-action-complete text-xs px-3 py-1.5 bg-[#10B981] hover:bg-[#0D9488] text-white rounded font-bold transition">Complete</button>
+                <button @click="cancelTrip(selectedTrip)" class="btn-action-cancel text-xs px-3 py-1.5 bg-[#FF3B30] hover:bg-[#D32F2F] text-white rounded font-bold transition">Cancel</button>
+              </div>
             </div>
-            <div class="meta-row">
-              <span class="lbl">Vehicle:</span>
-              <span class="val">{{ t.vehicle_id || 'Unassigned' }}</span>
+
+            <!-- Detail Grid -->
+            <div class="p-6 flex-1 overflow-y-auto space-y-6">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                  <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Assigned Vehicle</label>
+                  <span class="font-mono text-base font-bold text-white">{{ selectedTrip.vehicle_id || 'Unassigned' }}</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                  <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Assigned Driver</label>
+                  <span class="text-base font-bold text-white">{{ selectedTrip.driver_id || 'Unassigned' }}</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                  <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Planned Distance</label>
+                  <span class="font-mono text-base font-bold text-white">{{ selectedTrip.planned_distance }} km</span>
+                </div>
+                <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142]">
+                  <label class="block text-[10px] font-semibold text-[#94A3B8] uppercase tracking-widest mb-1 font-mono">Trip Status</label>
+                  <span class="badge mt-1 inline-block" :class="badgeClass(selectedTrip.status)">
+                    {{ selectedTrip.status }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Horizontal Progress Payload Capacity Column -->
+              <div class="p-4 rounded-lg bg-[#12131C] border border-[#2D3142] space-y-3">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-mono text-[#94A3B8] uppercase tracking-widest">Payload Carrying Capacity</span>
+                  <span class="font-mono font-bold text-white">{{ selectedTrip.cargo_weight }} kg / {{ getTripVehicleCapacity(selectedTrip) || 500 }} kg</span>
+                </div>
+                <div class="h-8 w-full bg-[#1A1C26] border border-[#2D3142] rounded overflow-hidden relative flex items-center justify-center">
+                  <div class="absolute left-0 top-0 h-full bg-[#2563EB] transition-all duration-500 ease-out" :style="{ width: Math.min(getTripCapacityPercentage(selectedTrip), 100) + '%' }"></div>
+                  <span class="absolute text-xs font-mono font-bold text-white z-10">{{ Math.round(getTripCapacityPercentage(selectedTrip)) }}% LOAD CAPACITY UTILIZED</span>
+                </div>
+              </div>
             </div>
-            <div class="meta-row">
-              <span class="lbl">Cargo Load Weight:</span>
-              <span class="val font-mono">{{ t.cargo_weight }} kg</span>
-            </div>
-            <div class="meta-row">
-              <span class="lbl">Estimated ETA:</span>
-              <span class="val font-mono">{{ t.eta || 'N/A' }}</span>
-            </div>
+          </div>
+          <div v-else class="flex flex-col items-center justify-center h-full text-[#94A3B8] p-8">
+            <p class="font-display font-medium text-slate-400">No Trip Selected</p>
+            <p class="text-xs text-slate-500 mt-1">Select an active trip from the log stream to view telemetry</p>
           </div>
         </div>
       </div>
@@ -282,9 +282,9 @@
         </div>
 
         <div class="modal-actions">
-          <button @click="showConfirmModal = false" class="btn-secondary">Cancel</button>
+          <button @click="showConfirmModal = false" class="btn-secondary" :disabled="isSubmitting">Cancel</button>
           <button @click="dispatchTrip" class="btn-primary" :disabled="isSubmitting">
-            {{ isSubmitting ? 'Dispatching...' : 'Confirm & Dispatch' }}
+            {{ isSubmitting ? 'Dispatching...' : 'Confirm & Launch Dispatch' }}
           </button>
         </div>
       </div>
@@ -293,7 +293,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue';
+import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { AlertTriangle } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
 import { useApiResource } from '../composables/useApiResource';
@@ -306,7 +306,7 @@ const showConfirmModal = ref(false);
 const selectedVehicleIndex = ref(-1);
 const selectedDriverIndex = ref(-1);
 const isSubmitting = ref(false);
-const expandedTrips = ref([]);
+const selectedTrip = ref(null);
 
 const { data: apiVehicles, fetch: fetchVehicles } = useApiResource('/vehicles');
 const { data: apiDrivers, fetch: fetchDrivers } = useApiResource('/drivers');
@@ -321,6 +321,32 @@ onMounted(() => {
   fetchDrivers();
   fetchTrips();
 });
+
+const selectTrip = (t) => {
+  selectedTrip.value = t;
+};
+
+const getTripVehicleCapacity = (trip) => {
+  if (!trip || !trip.vehicle_id) return 0;
+  const vehicle = (apiVehicles.value || []).find(v => v.registration_number === trip.vehicle_id);
+  return vehicle ? vehicle.max_load_capacity : 0;
+};
+
+const getTripCapacityPercentage = (trip) => {
+  const cap = getTripVehicleCapacity(trip);
+  if (!cap) return 0;
+  return (trip.cargo_weight / cap) * 100;
+};
+
+watch(trips, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    if (!selectedTrip.value || !newVal.some(x => x.id === selectedTrip.value.id)) {
+      selectedTrip.value = newVal[0];
+    }
+  } else {
+    selectedTrip.value = null;
+  }
+}, { immediate: true });
 
 const newTrip = reactive({
   source: '',
