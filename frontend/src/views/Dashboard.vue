@@ -1,7 +1,119 @@
 <template>
   <div>
+    <!-- SAFETY OFFICER SPECIALIZED VIEW -->
+    <div class="dashboard-container safety-theme" v-if="userRole === 'Safety Officer'">
+      <div class="page-header">
+        <div>
+          <h1>Safety &amp; Compliance Portal</h1>
+          <p class="subtitle">License compliance auditing and driver risk anomaly checks</p>
+        </div>
+      </div>
+
+      <!-- Actionable Alert Anomaly Banner -->
+      <div class="anomaly-banner" v-if="flaggedDrivers.length > 0">
+        <div class="banner-header">
+          <span class="alert-pulse">🔔</span>
+          <h3>Compliance Actionable Alerts</h3>
+          <span class="anomaly-count">{{ flaggedDrivers.length }} Flagged Drivers</span>
+        </div>
+        <div class="anomaly-list">
+          <div class="anomaly-card" v-for="driver in flaggedDrivers" :key="driver.licenseNo">
+            <div class="card-details">
+              <span class="driver-name font-bold">{{ driver.name }}</span>
+              <span class="issue-tag font-mono">{{ driver.issue }}</span>
+            </div>
+            <div class="card-actions">
+              <span class="badge" :class="trafficLightBadgeClass(driver.severity)">
+                {{ driver.severity }}
+              </span>
+              <button @click="resolveDriver(driver)" class="btn-sm btn-accent">Flag Resolved</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Safety KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-icon">👤</span>
+            <span class="kpi-label">Compliant Drivers</span>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value text-success">14</span>
+            <span class="kpi-subtext">Active &amp; valid licenses</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-icon">⚠️</span>
+            <span class="kpi-label">Flagged Licenses</span>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value text-warning">2</span>
+            <span class="kpi-subtext">Expiring within 30 days</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-icon">❌</span>
+            <span class="kpi-label">Suspended Drivers</span>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value text-danger">2</span>
+            <span class="kpi-subtext">Requires retraining</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Virtualized Historical Driver Logs Table -->
+      <div class="card logs-card">
+        <div class="card-header-logs">
+          <div>
+            <h3>Audit Log Archive (Virtualized View)</h3>
+            <p class="card-subtitle font-bold">Instantly scrolling through 2,000 audit records with zero lag</p>
+          </div>
+          <span class="logs-stats">Total Logs: {{ historicalLogs.length }} | Rendered: {{ visibleLogs.length }}</span>
+        </div>
+
+        <!-- Virtual Scroll Viewport -->
+        <div class="virtual-scroll-viewport" @scroll="handleScroll">
+          <div class="virtual-scroll-spacer" :style="{ height: totalListHeight + 'px' }">
+            <table class="data-table virtual-table" :style="{ transform: `translateY(${offsetY}px)` }">
+              <thead>
+                <tr>
+                  <th>Audit ID</th>
+                  <th>Driver Name</th>
+                  <th>Incident / Event</th>
+                  <th>Safety Score</th>
+                  <th>Compliance Check</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="log in visibleLogs" :key="log.id" style="height: 55px;">
+                  <td class="font-mono">#{{ log.id }}</td>
+                  <td class="font-bold highlight-text">{{ log.driver }}</td>
+                  <td>{{ log.event }}</td>
+                  <td>
+                    <span class="safety-score-label" :class="getSafetyClass(log.score)">
+                      {{ log.score }}/100
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" :class="complianceBadgeClass(log.compliance)">
+                      {{ log.compliance }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- DRIVER SPECIALIZED VIEW -->
-    <div class="dashboard-container driver-theme" v-if="userRole === 'Driver'">
+    <div class="dashboard-container driver-theme" v-else-if="userRole === 'Driver'">
       <div class="page-header">
         <div>
           <h1>My Active Dispatches</h1>
@@ -236,16 +348,96 @@ const userRole = ref('Fleet Manager');
 onMounted(() => {
   const user = JSON.parse(localStorage.getItem('transitops_user') || '{}');
   if (user.role) userRole.value = user.role;
+  generateHistoricalLogs();
 });
 
-// Stepper workflow tracking
+// SAFETY OFFICER: Flags & Anomalies list
+const flaggedDrivers = ref([
+  { name: 'Jack Torrance', licenseNo: 'DL-66611', issue: 'Safety score critically low (45/100)', severity: 'Red' },
+  { name: 'Bruce Wayne', licenseNo: 'DL-00707', issue: 'License expires within 30 days (expiring 2026-02-15)', severity: 'Orange' },
+  { name: 'Peter Parker', licenseNo: 'DL-12290', issue: 'Over-speed event logged', severity: 'Orange' }
+]);
+
+const resolveDriver = (driver) => {
+  flaggedDrivers.value = flaggedDrivers.value.filter(d => d.licenseNo !== driver.licenseNo);
+  showToast(`Compliance issue flagged for ${driver.name} marked as resolved!`, 'success');
+};
+
+const trafficLightBadgeClass = (severity) => {
+  if (severity === 'Red') return 'badge-danger';
+  if (severity === 'Orange') return 'badge-warning';
+  return 'badge-success';
+};
+
+// SAFETY OFFICER: Virtual Scroll historical compliance audit logs
+const historicalLogs = ref([]);
+const scrollTop = ref(0);
+const rowHeight = 55; // pixels per row
+const viewportHeight = 350; // height of viewport container
+
+const generateHistoricalLogs = () => {
+  const driversPool = ['Sarah Connor', 'Bruce Wayne', 'Alex Johnson', 'Peter Parker', 'Jack Torrance', 'Diana Prince', 'Clark Kent'];
+  const events = ['Speeding Alert', 'License Audit Completed', 'Seatbelt Unbuckled Check', 'Fatigue Warning Sensor', 'Route Deviation Checked', 'Brake G-Force Alert'];
+  const complianceStatus = ['Pass', 'Warn', 'Fail'];
+
+  const logs = [];
+  for (let i = 1; i <= 2000; i++) {
+    const score = Math.floor(Math.random() * 45) + 55; // 55 to 100
+    const compliance = score >= 90 ? 'Pass' : (score >= 70 ? 'Warn' : 'Fail');
+    logs.push({
+      id: 5000 + i,
+      driver: driversPool[i % driversPool.length],
+      event: events[i % events.length],
+      score: score,
+      compliance: compliance
+    });
+  }
+  historicalLogs.value = logs;
+};
+
+const handleScroll = (e) => {
+  scrollTop.value = e.target.scrollTop;
+};
+
+// List Virtualization Computed Values
+const totalListHeight = computed(() => {
+  return historicalLogs.value.length * rowHeight;
+});
+
+const visibleCount = computed(() => {
+  return Math.ceil(viewportHeight / rowHeight) + 2;
+});
+
+const startIndex = computed(() => {
+  return Math.floor(scrollTop.value / rowHeight);
+});
+
+const endIndex = computed(() => {
+  return startIndex.value + visibleCount.value;
+});
+
+const visibleLogs = computed(() => {
+  return historicalLogs.value.slice(startIndex.value, endIndex.value);
+});
+
+const offsetY = computed(() => {
+  return startIndex.value * rowHeight;
+});
+
+const complianceBadgeClass = (status) => {
+  if (status === 'Pass') return 'badge-success';
+  if (status === 'Warn') return 'badge-warning';
+  return 'badge-danger';
+};
+
+// Stepper workflow tracking for Driver
 const activeTrip = ref({
   id: 1046,
   source: 'Retail Hub A',
   destination: 'Storage Yard West',
   cargoWeight: 420,
   plannedDistance: 95,
-  status: 'Draft' // 'Draft', 'Dispatched', 'Completed'
+  status: 'Draft'
 });
 
 const currentStep = computed(() => {
@@ -271,7 +463,6 @@ const startTrip = () => {
 };
 
 const finishTrip = () => {
-  // Transfer to completed list
   driverTrips.value.unshift({
     id: activeTrip.value.id,
     source: activeTrip.value.source,
@@ -281,7 +472,7 @@ const finishTrip = () => {
     status: 'Completed'
   });
 
-  activeTrip.value = null; // Clear active trip
+  activeTrip.value = null;
   showToast('Trip dispatches completed successfully and logged!', 'success');
 };
 
@@ -516,7 +707,101 @@ const badgeClass = (status) => {
 .dot.inshop { background-color: var(--warning); }
 .dot.retired { background-color: var(--danger); }
 
-/* DRIVER VIEW WIDGET STYLING */
+/* SAFETY OFFICER STYLING */
+.anomaly-banner {
+  background-color: #1a0f12;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--border-radius-lg);
+  padding: 1.5rem;
+  box-shadow: 0 4px 25px rgba(239, 68, 68, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.banner-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--danger);
+}
+
+.banner-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+}
+
+.anomaly-count {
+  background-color: var(--danger-glow);
+  color: var(--danger);
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.alert-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.anomaly-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.anomaly-card {
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.card-details {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.driver-name {
+  color: #fff;
+}
+
+.issue-tag {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  background-color: var(--card-bg);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.card-actions .badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+}
+
+/* Stepper widget for Drivers layout */
 .stepper-card {
   border-left: 4px solid var(--primary);
 }
@@ -666,8 +951,87 @@ const badgeClass = (status) => {
   margin: 0 auto;
 }
 
+/* Virtual scroll layout overrides */
+.logs-card {
+  overflow: hidden;
+}
+
+.card-header-logs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.logs-stats {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  background-color: rgba(255,255,255,0.02);
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.virtual-scroll-viewport {
+  height: 350px;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  background-color: var(--card-bg);
+}
+
+.virtual-scroll-spacer {
+  position: relative;
+}
+
+.virtual-table {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.safety-score-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+}
+
+.safety-score-label.excellent {
+  color: var(--success);
+  background-color: var(--success-glow);
+}
+.safety-score-label.good {
+  color: var(--info);
+  background-color: var(--info-glow);
+}
+.safety-score-label.risk {
+  color: var(--danger);
+  background-color: var(--danger-glow);
+}
+
 .font-mono { font-family: var(--mono); }
 .font-bold { font-weight: 700; }
+.highlight-text { color: #fff; }
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: var(--border-radius-sm);
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  transition: opacity 0.2s ease;
+}
+
+.btn-sm:hover {
+  opacity: 0.9;
+}
+
+.btn-sm.btn-accent { background-color: var(--primary); color: white; }
 
 @media (max-width: 1100px) {
   .content-row {
