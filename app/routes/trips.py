@@ -1,12 +1,14 @@
 from flask import Blueprint, request, jsonify
 from app.database import SessionLocal
 from app.models import Trip, TripStatus, Vehicle, VehicleStatus, Driver, DriverStatus
+from app.decorators import token_required, roles_accepted
 from decimal import Decimal
 from datetime import datetime
 
 trips_bp = Blueprint('trips', __name__)
 
 @trips_bp.route('', methods=['GET'])
+@token_required
 def list_trips():
     session = SessionLocal()
     trips = session.query(Trip).all()
@@ -31,6 +33,7 @@ def list_trips():
     return jsonify(result), 200
 
 @trips_bp.route('', methods=['POST'])
+@roles_accepted('Admin', 'Dispatcher')
 def dispatch_trip():
     data = request.get_json() or {}
     source = data.get('source')

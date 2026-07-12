@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.database import SessionLocal
 from app.models import Maintenance, MaintenanceStatus, Vehicle, VehicleStatus
+from app.decorators import token_required, roles_accepted
 from app.utils import parse_date
 from decimal import Decimal
 from datetime import datetime
@@ -8,6 +9,7 @@ from datetime import datetime
 maintenance_bp = Blueprint('maintenance', __name__)
 
 @maintenance_bp.route('', methods=['GET'])
+@token_required
 def list_logs():
     session = SessionLocal()
     logs = session.query(Maintenance).all()
@@ -26,6 +28,7 @@ def list_logs():
     return jsonify(result), 200
 
 @maintenance_bp.route('', methods=['POST'])
+@roles_accepted('Admin', 'Mechanic')
 def log_service():
     data = request.get_json() or {}
     plate_number = data.get('vehicle_id')

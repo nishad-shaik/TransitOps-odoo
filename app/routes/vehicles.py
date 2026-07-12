@@ -1,12 +1,15 @@
 from flask import Blueprint, request, jsonify
 from app.database import SessionLocal
 from app.models import Vehicle, VehicleStatus
+from app.decorators import token_required, roles_accepted
 from decimal import Decimal
 
 vehicles_bp = Blueprint('vehicles', __name__)
 
 @vehicles_bp.route('', methods=['GET'])
+@token_required
 def list_vehicles():
+
     session = SessionLocal()
     vehicles = session.query(Vehicle).all()
     
@@ -25,6 +28,7 @@ def list_vehicles():
     return jsonify(result), 200
 
 @vehicles_bp.route('', methods=['POST'])
+@roles_accepted('Admin')
 def add_vehicle():
     data = request.get_json() or {}
     plate_number = data.get('registration_number')

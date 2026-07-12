@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.database import SessionLocal
 from app.models import FuelLog, Expense, Vehicle, ExpenseCategory
+from app.decorators import token_required, roles_accepted
 from decimal import Decimal
 from datetime import datetime
 from app.utils import parse_date
@@ -8,6 +9,7 @@ from app.utils import parse_date
 operations_bp = Blueprint('operations', __name__)
 
 @operations_bp.route('/fuel-logs', methods=['GET'])
+@token_required
 def list_fuel():
     session = SessionLocal()
     logs = session.query(FuelLog).all()
@@ -26,6 +28,7 @@ def list_fuel():
     return jsonify(result), 200
 
 @operations_bp.route('/fuel-logs', methods=['POST'])
+@roles_accepted('Admin', 'Driver', 'Financial Analyst')
 def add_fuel():
     data = request.get_json() or {}
     plate_number = data.get('vehicle_id')

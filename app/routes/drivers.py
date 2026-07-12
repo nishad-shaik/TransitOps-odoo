@@ -1,12 +1,14 @@
 from flask import Blueprint, request, jsonify
 from app.database import SessionLocal
 from app.models import Driver, DriverStatus
+from app.decorators import token_required, roles_accepted
 from app.utils import parse_date
 from decimal import Decimal
 
 drivers_bp = Blueprint('drivers', __name__)
 
 @drivers_bp.route('', methods=['GET'])
+@token_required
 def list_drivers():
     session = SessionLocal()
     drivers = session.query(Driver).all()
@@ -27,6 +29,7 @@ def list_drivers():
     return jsonify(result), 200
 
 @drivers_bp.route('', methods=['POST'])
+@roles_accepted('Admin')
 def add_driver():
     data = request.get_json() or {}
     name = data.get('name')
