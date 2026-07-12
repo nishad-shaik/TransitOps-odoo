@@ -80,9 +80,9 @@
         </div>
 
         <!-- Live Business Validation Warning -->
-        <div v-if="validationError" class="validation-warning">
+        <div v-if="validateTripCapacity" class="validation-warning">
           <AlertTriangle class="warning-icon-svg" />
-          <span>{{ validationError }}</span>
+          <span>{{ validateTripCapacity }}</span>
         </div>
 
         <div class="form-actions">
@@ -383,7 +383,7 @@ const capacityPercentage = computed(() => {
 });
 
 // Real-time, computed validation warning state
-const validationError = computed(() => {
+const validateTripCapacity = computed(() => {
   if (selectedVehicleIndex.value === -1 || selectedDriverIndex.value === -1) {
     return '';
   }
@@ -424,8 +424,8 @@ const validationError = computed(() => {
 });
 
 const openConfirmationModal = () => {
-  if (validationError.value) {
-    showToast(validationError.value, 'error');
+  if (validateTripCapacity.value) {
+    showToast(validateTripCapacity.value, 'error');
     return;
   }
   if (selectedVehicleIndex.value === -1 || selectedDriverIndex.value === -1) {
@@ -437,8 +437,8 @@ const openConfirmationModal = () => {
 
 const dispatchTrip = async () => {
   if (isSubmitting.value) return;
-  if (validationError.value) {
-    showToast(validationError.value, 'error');
+  if (validateTripCapacity.value) {
+    showToast(validateTripCapacity.value, 'error');
     return;
   }
 
