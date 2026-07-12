@@ -11,6 +11,9 @@
         <router-view />
       </main>
     </div>
+    
+    <!-- Global Toasts -->
+    <ToastNotification />
   </div>
 </template>
 
@@ -19,6 +22,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Sidebar from './components/layout/Sidebar.vue';
 import Topbar from './components/layout/Topbar.vue';
+import ToastNotification from './components/ui/ToastNotification.vue';
 
 const route = useRoute();
 
@@ -27,6 +31,7 @@ const isAuthView = computed(() => {
   return route.name === 'Login';
 });
 </script>
+
 
 <style>
 .app-layout {
