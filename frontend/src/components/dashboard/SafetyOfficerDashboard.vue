@@ -122,6 +122,14 @@ import { ref, computed, onMounted } from 'vue';
 import { ShieldAlert, Users, XCircle, AlertTriangle } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
 
+const props = defineProps({
+  currentUser: {
+    type: Object,
+    default: () => ({})
+  }
+});
+
+const emit = defineEmits(['refresh']);
 
 const { showToast } = useToast();
 

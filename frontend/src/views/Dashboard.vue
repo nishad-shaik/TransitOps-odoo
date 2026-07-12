@@ -1,13 +1,13 @@
 <template>
   <div>
     <!-- Render safety-officer custom dashboard layout -->
-    <SafetyOfficerDashboard v-if="userRole === 'Safety Officer'" />
+    <SafetyOfficerDashboard v-if="userRole === 'Safety Officer'" :currentUser="currentUser" />
 
     <!-- Render driver-focused operation stepper dashboard layout -->
-    <DriverDashboard v-else-if="userRole === 'Driver'" />
+    <DriverDashboard v-else-if="userRole === 'Driver'" :currentUser="currentUser" />
 
     <!-- Render standard overview fleet dashboard for other roles -->
-    <ManagerDashboard v-else />
+    <ManagerDashboard v-else :currentUser="currentUser" />
   </div>
 </template>
 
@@ -18,9 +18,11 @@ import DriverDashboard from '../components/dashboard/DriverDashboard.vue';
 import ManagerDashboard from '../components/dashboard/ManagerDashboard.vue';
 
 const userRole = ref('Fleet Manager');
+const currentUser = ref({});
 
 onMounted(() => {
   const user = JSON.parse(localStorage.getItem('transitops_user') || '{}');
+  currentUser.value = user;
   if (user.role) userRole.value = user.role;
 });
 </script>

@@ -161,6 +161,15 @@ import { Compass, Hourglass, BarChart3, Wrench } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
 import { useApiResource } from '../../composables/useApiResource';
 
+const props = defineProps({
+  currentUser: {
+    type: Object,
+    default: () => ({})
+  }
+});
+
+const emit = defineEmits(['refresh']);
+
 const { showToast } = useToast();
 
 const showTutorial = ref(!localStorage.getItem('hasVisitedTransitOps'));

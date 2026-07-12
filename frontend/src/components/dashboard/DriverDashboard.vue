@@ -129,6 +129,16 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { Compass, Check } from '@lucide/vue';
 import { useToast } from '../../composables/useToast';
 import { useApiResource } from '../../composables/useApiResource';
+import { client } from '../../api/client';
+
+const props = defineProps({
+  currentUser: {
+    type: Object,
+    default: () => ({})
+  }
+});
+
+const emit = defineEmits(['refresh']);
 
 const { showToast } = useToast();
 const isSubmitting = ref(false);
@@ -161,20 +171,49 @@ const completionData = reactive({
 });
 
 onMounted(async () => {
-  const user = JSON.parse(localStorage.getItem('transitops_user') || '{}');
   await fetchDrivers();
   // Match driver name with email
-  const matchedDriver = (allDrivers.value || []).find(d => d.email === user.email);
+  const matchedDriver = (allDrivers.value || []).find(d => d.email === props.currentUser.email);
   driverName.value = matchedDriver ? matchedDriver.name : 'Fatima Diaz';
   await fetchTrips();
 });
 
-const startTrip = () => {
-  showToast('Departure declared! Drive safely.', 'success');
+const startTrip = async () => {
+  if (isSubmitting.value || !activeTrip.value) return;
+  isSubmitting.value = true;
+  try {
+    await client.patch(`/trips/${activeTrip.value.id}`, { status: 'Ongoing' });
+    showToast('Departure declared! Drive safely.', 'success');
+    await fetchTrips();
+    emit('refresh');
+  } catch (err) {
+    showToast(err.message || 'Failed to start trip.', 'error');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
-const finishTrip = () => {
-  showToast('Trip dispatches completed successfully and logged!', 'success');
+const finishTrip = async () => {
+  if (isSubmitting.value || !activeTrip.value) return;
+  isSubmitting.value = true;
+  try {
+    const actualDistance = Number(completionData.actualDistance);
+    const fuelLiters = Math.round(actualDistance / 8);
+    const fuelCost = Number(completionData.fuelCost);
+    await client.patch(`/trips/${activeTrip.value.id}`, { 
+      status: 'Completed',
+      actual_distance: actualDistance,
+      fuel_liters: fuelLiters,
+      fuel_cost: fuelCost
+    });
+    showToast('Trip dispatches completed successfully and logged!', 'success');
+    await fetchTrips();
+    emit('refresh');
+  } catch (err) {
+    showToast(err.message || 'Failed to complete trip.', 'error');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>
 
