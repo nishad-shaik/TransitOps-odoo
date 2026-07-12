@@ -233,7 +233,7 @@ const handleLogin = async () => {
   errorMessage.value = '';
 
   const cleanEmail = sanitizeInput(email.value);
-  const cleanPassword = sanitizeInput(password.value);
+  const cleanPassword = password.value; // OWASP: Don't sanitize passwords; transmit as typed to prevent hash mismatches
 
   if (!cleanEmail || !cleanPassword) {
     errorMessage.value = 'Email and password are required.';
@@ -325,8 +325,8 @@ const handleRegister = async () => {
   loading.value = true;
 
   const cleanEmail = sanitizeInput(regEmail.value);
-  const cleanPassword = sanitizeInput(regPassword.value);
-  const cleanConfirm = sanitizeInput(regConfirmPassword.value);
+  const cleanPassword = regPassword.value; // OWASP: Transmit passwords raw to prevent hash mismatches
+  const cleanConfirm = regConfirmPassword.value;
 
   // Validate passwords match
   if (cleanPassword !== cleanConfirm) {
