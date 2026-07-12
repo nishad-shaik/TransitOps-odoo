@@ -54,7 +54,6 @@
             <input
               type="number"
               v-model.number="newTrip.cargo_weight"
-              @input="validateTripCapacity"
               required
             />
             
@@ -179,6 +178,7 @@
               <th>Distance</th>
               <th>Status</th>
               <th>ETA</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -195,6 +195,13 @@
                 </span>
               </td>
               <td>{{ t.eta || 'N/A' }}</td>
+              <td>
+                <div class="flex-gap-2" v-if="t.status === 'Dispatched' || t.status === 'Ongoing'">
+                  <button @click="completeTrip(t)" class="btn-action-complete">Complete</button>
+                  <button @click="cancelTrip(t)" class="btn-action-cancel">Cancel</button>
+                </div>
+                <span v-else class="text-muted">-</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -290,6 +297,7 @@ import { ref, computed, reactive, onMounted } from 'vue';
 import { AlertTriangle } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
 import { useApiResource } from '../composables/useApiResource';
+import { client } from '../api/client';
 
 const { showToast } = useToast();
 
@@ -297,7 +305,6 @@ const showCreateForm = ref(false);
 const showConfirmModal = ref(false);
 const selectedVehicleIndex = ref(-1);
 const selectedDriverIndex = ref(-1);
-const validationError = ref('');
 const isSubmitting = ref(false);
 const expandedTrips = ref([]);
 
@@ -321,7 +328,6 @@ const newTrip = reactive({
   cargo_weight: 0,
   planned_distance: 0
 });
-
 
 const toggleTripAccordion = (id) => {
   if (expandedTrips.value.includes(id)) {
@@ -350,69 +356,67 @@ const capacityPercentage = computed(() => {
   return (newTrip.cargo_weight / selectedVehicle.value.max_load_capacity) * 100;
 });
 
-const validateTripCapacity = () => {
-  validationError.value = '';
-  if (selectedVehicle.value) {
-    if (newTrip.cargo_weight > selectedVehicle.value.max_load_capacity) {
-      const overage = newTrip.cargo_weight - selectedVehicle.value.max_load_capacity;
-      validationError.value = `Capacity exceeded by ${overage}kg — dispatch blocked`;
-    }
-  }
-};
-
-const handleVehicleChange = () => {
-  validateTripCapacity();
-};
-
-const validateOperationalRules = () => {
+// Real-time, computed validation warning state
+const validationError = computed(() => {
   if (selectedVehicleIndex.value === -1 || selectedDriverIndex.value === -1) {
-    showToast('Validation Error: Select both a vehicle and a driver.', 'error');
-    return false;
+    return '';
   }
-
-  // Clone local references
-  const vehicle = { ...availableVehicles.value[selectedVehicleIndex.value] };
-  const driver = { ...availableDrivers.value[selectedDriverIndex.value] };
+  
+  const vehicle = availableVehicles.value[selectedVehicleIndex.value];
+  const driver = availableDrivers.value[selectedDriverIndex.value];
   const weight = Number(newTrip.cargo_weight);
-
-  // 1. Capacity weight check
-  if (weight > vehicle.max_load_capacity) {
-    showToast(`Validation Error: Cargo Weight (${weight}kg) exceeds selected vehicle's Maximum Load Capacity (${vehicle.max_load_capacity}kg).`, 'error');
-    return false;
+  
+  if (!vehicle || !driver) {
+    return '';
   }
-
-  // 2. Driver status and license validity checks
+  
+  if (weight > vehicle.max_load_capacity) {
+    return `Cargo Weight (${weight}kg) exceeds selected vehicle's Max Load Capacity (${vehicle.max_load_capacity}kg).`;
+  }
+  
   const mockCurrentDate = new Date('2026-07-12');
   const expiryDate = new Date(driver.license_expiry_date);
-  if (driver.status === 'Suspended' || expiryDate < mockCurrentDate) {
-    showToast(`Security Alert: Selected driver (${driver.name}) is Suspended or has an Expired license (${driver.license_expiry_date}).`, 'error');
-    return false;
+  if (driver.status === 'Suspended') {
+    return `Selected driver (${driver.name}) is Suspended.`;
   }
-
-  // 3. Busy states check ("On Trip")
-  if (vehicle.status === 'On Trip' || driver.status === 'On Trip') {
-    showToast('Operation Blocked: Selected vehicle or driver is currently On Trip.', 'error');
-    return false;
+  if (expiryDate < mockCurrentDate) {
+    return `Selected driver license is expired (${driver.license_expiry_date}).`;
   }
-
-  // 4. Shop or Retired state check
+  
+  if (vehicle.status === 'On Trip') {
+    return 'Selected vehicle is currently On Trip.';
+  }
+  if (driver.status === 'On Trip') {
+    return 'Selected driver is currently On Trip.';
+  }
+  
   if (vehicle.status === 'In Shop' || vehicle.status === 'Retired') {
-    showToast(`Maintenance Blocked: Vehicle ${vehicle.registration_number} has status '${vehicle.status}' and cannot be dispatched.`, 'error');
-    return false;
+    return `Selected vehicle has status '${vehicle.status}' and cannot be dispatched.`;
   }
-
-  return true;
-};
+  
+  return '';
+});
 
 const openConfirmationModal = () => {
-  if (!validateOperationalRules()) return;
+  if (validationError.value) {
+    showToast(validationError.value, 'error');
+    return;
+  }
+  if (selectedVehicleIndex.value === -1 || selectedDriverIndex.value === -1) {
+    showToast('Validation Error: Select both a vehicle and a driver.', 'error');
+    return;
+  }
   showConfirmModal.value = true;
 };
 
 const dispatchTrip = async () => {
   if (isSubmitting.value) return;
-  isSubmitting.value = true;
+  if (validationError.value) {
+    showToast(validationError.value, 'error');
+    return;
+  }
 
+  isSubmitting.value = true;
   const vehicle = availableVehicles.value[selectedVehicleIndex.value];
   const driver = availableDrivers.value[selectedDriverIndex.value];
 
@@ -429,6 +433,7 @@ const dispatchTrip = async () => {
     // Refresh vehicles and drivers since status changed on backend
     await fetchVehicles();
     await fetchDrivers();
+    await fetchTrips();
 
     // Reset indices and modal
     selectedVehicleIndex.value = -1;
@@ -450,11 +455,27 @@ const dispatchTrip = async () => {
 };
 
 const completeTrip = async (trip) => {
-  showToast('Simulated: Complete trip action logged.', 'info');
+  try {
+    await client.patch(`/trips/${trip.id}`, { status: 'Completed' });
+    showToast(`Trip #${trip.id} completed successfully!`, 'success');
+    await fetchTrips();
+    await fetchVehicles();
+    await fetchDrivers();
+  } catch (err) {
+    showToast(err.message || 'Failed to complete trip.', 'error');
+  }
 };
 
 const cancelTrip = async (trip) => {
-  showToast('Simulated: Cancel trip action logged.', 'info');
+  try {
+    await client.patch(`/trips/${trip.id}`, { status: 'Cancelled' });
+    showToast(`Trip #${trip.id} cancelled successfully!`, 'success');
+    await fetchTrips();
+    await fetchVehicles();
+    await fetchDrivers();
+  } catch (err) {
+    showToast(err.message || 'Failed to cancel trip.', 'error');
+  }
 };
 
 const selectForEdit = (trip) => {
@@ -466,7 +487,7 @@ const selectForEdit = (trip) => {
 };
 
 const badgeClass = (status) => {
-  if (status === 'Dispatched') return 'badge-info';
+  if (status === 'Dispatched' || status === 'Ongoing') return 'badge-info';
   if (status === 'Completed') return 'badge-success';
   if (status === 'Draft') return 'badge-warning';
   return 'badge-danger';
@@ -858,5 +879,38 @@ const badgeClass = (status) => {
   .trips-board {
     grid-template-columns: 1fr;
   }
+}
+
+.btn-action-complete {
+  background-color: var(--success);
+  color: #fff;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.btn-action-complete:hover {
+  opacity: 0.9;
+}
+.btn-action-cancel {
+  background-color: var(--danger);
+  color: #fff;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.btn-action-cancel:hover {
+  opacity: 0.9;
+}
+.flex-gap-2 {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>

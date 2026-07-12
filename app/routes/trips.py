@@ -84,3 +84,43 @@ def dispatch_trip():
         "status": trip.status.value,
         "eta": "2h 30m"
     }), 201
+
+@trips_bp.route('/<int:trip_id>', methods=['PATCH'])
+@token_required
+def update_trip_status(trip_id):
+    data = request.get_json() or {}
+    new_status_str = data.get('status')
+    
+    if not new_status_str:
+        return jsonify({"error": {"code": "BAD_REQUEST", "message": "Status parameter is required"}}), 400
+        
+    session = SessionLocal()
+    trip = session.query(Trip).filter_by(id=trip_id).first()
+    if not trip:
+        return jsonify({"error": {"code": "NOT_FOUND", "message": "Trip not found"}}), 404
+        
+    try:
+        new_status = TripStatus(new_status_str)
+    except ValueError:
+        return jsonify({"error": {"code": "BAD_REQUEST", "message": f"Invalid trip status: {new_status_str}"}}), 400
+        
+    trip.status = new_status
+    
+    vehicle = session.query(Vehicle).filter_by(id=trip.vehicle_id).first()
+    driver = session.query(Driver).filter_by(id=trip.driver_id).first()
+    
+    if new_status in (TripStatus.completed, TripStatus.cancelled):
+        if vehicle:
+            vehicle.status = VehicleStatus.available
+        if driver:
+            driver.status = DriverStatus.available
+            
+    session.commit()
+    
+    return jsonify({
+        "id": trip.id,
+        "status": trip.status.value,
+        "vehicle_id": vehicle.plate_number if vehicle else None,
+        "driver_id": driver.name if driver else None
+    }), 200
+
