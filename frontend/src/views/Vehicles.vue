@@ -6,7 +6,7 @@
         <h1>Vehicle Registry</h1>
         <p class="subtitle">Manage company vehicles and operational status</p>
       </div>
-      <button @click="showAddModal = true" class="btn-primary">
+      <button @click="openAddDrawer" class="btn-primary">
         <span class="plus-icon">+</span> Add Vehicle
       </button>
     </div>
@@ -60,7 +60,12 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="vehicle in filteredVehicles" :key="vehicle.id">
+          <tr 
+            v-for="vehicle in filteredVehicles" 
+            :key="vehicle.id" 
+            @click="openVehicleDrawer(vehicle)"
+            class="cursor-pointer hover:bg-white/5 transition"
+          >
             <td class="font-mono highlight-text">{{ vehicle.registration_number }}</td>
             <td>{{ vehicle.vehicle_name }}</td>
             <td>
@@ -75,7 +80,7 @@
               </span>
             </td>
             <td>
-              <button @click="editVehicle(vehicle)" class="btn-text">Edit</button>
+              <button @click.stop="openVehicleDrawer(vehicle)" class="btn-text">Edit</button>
             </td>
           </tr>
           <tr v-if="filteredVehicles.length === 0">
@@ -124,7 +129,7 @@
             <span class="val font-mono">${{ vehicle.acquisition_cost.toLocaleString() }}</span>
           </div>
           <div class="meta-row action-row">
-            <button @click="editVehicle(vehicle)" class="btn-sm btn-accent">Edit Vehicle</button>
+            <button @click.stop="openVehicleDrawer(vehicle)" class="btn-sm btn-accent">Edit Vehicle</button>
           </div>
         </div>
       </div>
@@ -133,54 +138,116 @@
       </div>
     </div>
 
-    <!-- Modal Form -->
-    <div v-if="showAddModal" class="modal-overlay" @click.self="showAddModal = false">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>Add New Vehicle</h3>
-          <button @click="showAddModal = false" class="close-btn">&times;</button>
-        </div>
-        <form @submit.prevent="saveVehicle">
-          <div class="form-group">
-            <label>Registration Number</label>
-            <input type="text" v-model="newVehicle.registration_number" placeholder="e.g. VAN-05" required />
-          </div>
-          <div class="form-group">
-            <label>Name/Model</label>
-            <input type="text" v-model="newVehicle.vehicle_name" placeholder="e.g. Ford Transit 350" required />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Type</label>
-              <select v-model="newVehicle.type">
-                <option value="Van">Van</option>
-                <option value="Truck">Truck</option>
-                <option value="Sedan">Sedan</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Max Load Capacity (kg)</label>
-              <input type="number" v-model.number="newVehicle.max_load_capacity" required />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Odometer Reading (km)</label>
-              <input type="number" v-model.number="newVehicle.odometer" required />
-            </div>
-            <div class="form-group">
-              <label>Acquisition Cost ($)</label>
-              <input type="number" v-model.number="newVehicle.acquisition_cost" required />
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="isSubmitting">
-              {{ isSubmitting ? 'Saving...' : 'Save Vehicle' }}
-            </button>
-          </div>
-        </form>
+    <!-- Right-Hand Sliding Glassmorphic Side Drawer -->
+    <div 
+      class="fixed top-0 right-0 h-full w-full max-w-[460px] bg-[#161B26] bg-opacity-50 backdrop-blur-lg border-l border-white/10 z-[999] shadow-2xl flex flex-col transition-all duration-300 ease-in-out"
+      :class="showAddModal ? 'translate-x-0' : 'translate-x-full'"
+    >
+      <div class="p-6 border-b border-white/5 flex justify-between items-center bg-[#0B0F19]/30">
+        <h3 class="text-xl font-bold text-white">
+          {{ isEditing ? 'Edit Vehicle specifications' : 'Register New Vehicle' }}
+        </h3>
+        <button @click="showAddModal = false" class="text-2xl text-slate-400 hover:text-white transition">&times;</button>
       </div>
+      
+      <form @submit.prevent="saveVehicle" class="flex-1 overflow-y-auto p-6 space-y-5">
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Registration Number</label>
+          <input 
+            type="text" 
+            v-model="newVehicle.registration_number" 
+            placeholder="e.g. VAN-05" 
+            required 
+            class="bg-[#1E2533] border border-white/10 text-white rounded px-4 py-3 w-full focus:border-cyan-500 transition outline-none font-mono"
+            :disabled="isEditing"
+          />
+        </div>
+        
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Vehicle Name / Model</label>
+          <input 
+            type="text" 
+            v-model="newVehicle.vehicle_name" 
+            placeholder="e.g. Ford Transit 350" 
+            required 
+            class="bg-[#1E2533] border border-white/10 text-white rounded px-4 py-3 w-full focus:border-cyan-500 transition outline-none"
+          />
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Type</label>
+            <select 
+              v-model="newVehicle.type" 
+              class="bg-[#1E2533] border border-white/10 text-white rounded px-4 py-3 w-full focus:border-cyan-500 transition outline-none"
+            >
+              <option value="Van">Van</option>
+              <option value="Truck">Truck</option>
+              <option value="Sedan">Sedan</option>
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Max Load (kg)</label>
+            <input 
+              type="number" 
+              v-model.number="newVehicle.max_load_capacity" 
+              required 
+              class="bg-[#1E2533] border border-white/10 text-white rounded px-4 py-3 w-full focus:border-cyan-500 transition outline-none font-mono"
+            />
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Odometer (km)</label>
+            <input 
+              type="number" 
+              v-model.number="newVehicle.odometer" 
+              required 
+              class="bg-[#1E2533] border border-white/10 text-white rounded px-4 py-3 w-full focus:border-cyan-500 transition outline-none font-mono"
+            />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Acquisition Cost ($)</label>
+            <input 
+              type="number" 
+              v-model.number="newVehicle.acquisition_cost" 
+              required 
+              class="bg-[#1E2533] border border-white/10 text-white rounded px-4 py-3 w-full focus:border-cyan-500 transition outline-none font-mono"
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1" v-if="isEditing">
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</label>
+          <select 
+            v-model="newVehicle.status" 
+            class="bg-[#1E2533] border border-white/10 text-white rounded px-4 py-3 w-full focus:border-cyan-500 transition outline-none"
+          >
+            <option value="Available">Available</option>
+            <option value="On Trip">On Trip</option>
+            <option value="In Shop">In Shop</option>
+            <option value="Retired">Retired</option>
+          </select>
+        </div>
+
+        <div class="pt-6 flex gap-4">
+          <button 
+            type="button" 
+            @click="showAddModal = false" 
+            class="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded font-bold transition"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="flex-1 px-4 py-3 bg-cyan-500 hover:bg-cyan-600 text-slate-900 rounded font-bold transition shadow-lg"
+            :disabled="isSubmitting"
+          >
+            {{ isSubmitting ? 'Saving...' : 'Save specifications' }}
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </template>
@@ -190,6 +257,7 @@ import { ref, computed, reactive, onMounted } from 'vue';
 import { Info, Search } from '@lucide/vue';
 import { useToast } from '../composables/useToast';
 import { useApiResource } from '../composables/useApiResource';
+import { client } from '../api/client';
 
 const { showToast } = useToast();
 
@@ -198,6 +266,7 @@ const filterType = ref('All');
 const filterStatus = ref('All');
 const showAddModal = ref(false);
 const isSubmitting = ref(false);
+const isEditing = ref(false);
 const expandedRegs = ref([]);
 
 const { data: apiVehicles, fetch: fetchVehicles, create: createVehicle } = useApiResource('/vehicles');
@@ -217,13 +286,36 @@ const newVehicle = reactive({
   status: 'Available'
 });
 
-
 const toggleAccordion = (regNo) => {
   if (expandedRegs.value.includes(regNo)) {
     expandedRegs.value = expandedRegs.value.filter(r => r !== regNo);
   } else {
     expandedRegs.value.push(regNo);
   }
+};
+
+const openVehicleDrawer = (vehicle) => {
+  isEditing.value = true;
+  newVehicle.registration_number = vehicle.registration_number;
+  newVehicle.vehicle_name = vehicle.vehicle_name;
+  newVehicle.type = vehicle.type;
+  newVehicle.max_load_capacity = vehicle.max_load_capacity;
+  newVehicle.odometer = vehicle.odometer;
+  newVehicle.acquisition_cost = vehicle.acquisition_cost;
+  newVehicle.status = vehicle.status;
+  showAddModal.value = true;
+};
+
+const openAddDrawer = () => {
+  isEditing.value = false;
+  newVehicle.registration_number = '';
+  newVehicle.vehicle_name = '';
+  newVehicle.type = 'Van';
+  newVehicle.max_load_capacity = 500;
+  newVehicle.odometer = 0;
+  newVehicle.acquisition_cost = 20000;
+  newVehicle.status = 'Available';
+  showAddModal.value = true;
 };
 
 const filteredVehicles = computed(() => {
@@ -247,43 +339,47 @@ const saveVehicle = async () => {
   if (isSubmitting.value) return;
   
   const regNoCopy = String(newVehicle.registration_number).trim();
-  const exists = vehicles.value.some(v => v.registration_number.toLowerCase() === regNoCopy.toLowerCase());
   
-  if (exists) {
-    showToast('Validation Error: Registration Number must be unique.', 'error');
-    return;
-  }
-
   isSubmitting.value = true;
   try {
-    await createVehicle({
-      registration_number: regNoCopy,
-      vehicle_name: String(newVehicle.vehicle_name).trim(),
-      type: newVehicle.type,
-      max_load_capacity: Number(newVehicle.max_load_capacity),
-      odometer: Number(newVehicle.odometer),
-      acquisition_cost: Number(newVehicle.acquisition_cost)
-    });
+    if (isEditing.value) {
+      // Execute live PATCH to the backend update route
+      await client.patch(`/vehicles/${regNoCopy}`, {
+        vehicle_name: String(newVehicle.vehicle_name).trim(),
+        type: newVehicle.type,
+        max_load_capacity: Number(newVehicle.max_load_capacity),
+        odometer: Number(newVehicle.odometer),
+        acquisition_cost: Number(newVehicle.acquisition_cost),
+        status: newVehicle.status
+      });
+      showToast(`Vehicle ${regNoCopy} specifications updated!`, 'success');
+    } else {
+      const exists = vehicles.value.some(v => v.registration_number.toLowerCase() === regNoCopy.toLowerCase());
+      if (exists) {
+        showToast('Validation Error: Registration Number must be unique.', 'error');
+        isSubmitting.value = false;
+        return;
+      }
+      await createVehicle({
+        registration_number: regNoCopy,
+        vehicle_name: String(newVehicle.vehicle_name).trim(),
+        type: newVehicle.type,
+        max_load_capacity: Number(newVehicle.max_load_capacity),
+        odometer: Number(newVehicle.odometer),
+        acquisition_cost: Number(newVehicle.acquisition_cost)
+      });
+      showToast(`Vehicle ${regNoCopy} registered successfully!`, 'success');
+    }
     
-    showToast(`Vehicle ${regNoCopy} added successfully!`, 'success');
+    await fetchVehicles();
     showAddModal.value = false;
-    
-    // Reset Form
-    newVehicle.registration_number = '';
-    newVehicle.vehicle_name = '';
-    newVehicle.max_load_capacity = 500;
-    newVehicle.odometer = 0;
-    newVehicle.acquisition_cost = 20000;
   } catch (err) {
-    showToast(err.message || 'Failed to add vehicle.', 'error');
+    showToast(err.message || 'Failed to save vehicle details.', 'error');
   } finally {
     isSubmitting.value = false;
   }
 };
 
-const editVehicle = (vehicle) => {
-  showToast(`Edit record loaded for ${vehicle.registration_number}`, 'info');
-};
 </script>
 
 <style scoped>

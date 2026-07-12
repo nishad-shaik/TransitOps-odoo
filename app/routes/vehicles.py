@@ -23,7 +23,7 @@ def list_vehicles():
             "max_load_capacity": float(v.max_load_capacity),
             "odometer": float(v.current_odometer),
             "acquisition_cost": float(v.acquisition_cost),
-            "status": v.status.value
+            "status": "In Shop" if v.status == VehicleStatus.maintenance else v.status.value
         })
     return jsonify(result), 200
 
@@ -67,5 +67,44 @@ def add_vehicle():
         "max_load_capacity": float(vehicle.max_load_capacity),
         "odometer": float(vehicle.current_odometer),
         "acquisition_cost": float(vehicle.acquisition_cost),
-        "status": vehicle.status.value
+        "status": "In Shop" if vehicle.status == VehicleStatus.maintenance else vehicle.status.value
     }), 201
+
+@vehicles_bp.route('/<string:plate_number>', methods=['PATCH'])
+@token_required
+def update_vehicle(plate_number):
+    data = request.get_json() or {}
+    
+    session = SessionLocal()
+    vehicle = session.query(Vehicle).filter_by(plate_number=plate_number).first()
+    if not vehicle:
+        return jsonify({"error": {"code": "NOT_FOUND", "message": "Vehicle not found"}}), 404
+        
+    if 'vehicle_name' in data:
+        vehicle.model = data['vehicle_name']
+    if 'type' in data:
+        vehicle.type = data['type']
+    if 'max_load_capacity' in data:
+        vehicle.max_load_capacity = Decimal(str(data['max_load_capacity']))
+    if 'odometer' in data:
+        vehicle.current_odometer = Decimal(str(data['odometer']))
+    if 'acquisition_cost' in data:
+        vehicle.acquisition_cost = Decimal(str(data['acquisition_cost']))
+    if 'status' in data:
+        status_val = data['status']
+        if status_val == "In Shop":
+            status_val = "Maintenance"
+        try:
+            vehicle.status = VehicleStatus(status_val)
+        except ValueError:
+            return jsonify({"error": {"code": "BAD_REQUEST", "message": f"Invalid vehicle status: {data['status']}"}}), 400
+            
+    session.commit()
+    
+    return jsonify({
+        "id": vehicle.id,
+        "registration_number": vehicle.plate_number,
+        "vehicle_name": vehicle.model,
+        "status": "In Shop" if vehicle.status == VehicleStatus.maintenance else vehicle.status.value
+    }), 200
+
