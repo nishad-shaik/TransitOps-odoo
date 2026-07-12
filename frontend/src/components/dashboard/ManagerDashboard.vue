@@ -123,6 +123,35 @@
         </div>
       </div>
     </div>
+
+    <!-- First-Visit Tutorial Overlay -->
+    <div v-if="showTutorial" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+      <div class="bg-[#1A1C26] border border-[#2D3142] rounded-xl p-8 max-w-md w-full shadow-2xl relative space-y-6">
+        <h4 class="text-xl font-bold text-white flex items-center gap-2 font-display">
+          <span class="px-2.5 py-0.5 text-[10px] bg-[#2563EB] text-white rounded font-mono font-bold tracking-wider">STEP {{ tutorialStep + 1 }} OF 3</span>
+          Fleet Tour Guide
+        </h4>
+        
+        <div class="text-sm text-[#94A3B8] leading-relaxed">
+          <p v-if="tutorialStep === 0">
+            <strong>Dynamic Dashboard KPIs:</strong> Real-time counts of ongoing dispatches, pending tasks, workshop repairs, and fleet utilization rates are summarized inside these Bento panels. Click any card to filter below.
+          </p>
+          <p v-else-if="tutorialStep === 1">
+            <strong>Left Action Panel &amp; Sidebar Navigation:</strong> Click items in the sidebar to jump directly between active registries (Vehicles, Drivers, Dispatches, Maintenance, and Analytics).
+          </p>
+          <p v-else-if="tutorialStep === 2">
+            <strong>Live Logs &amp; Operational States:</strong> The bottom grid displays active operations. Keep a watch on active states and alerts to maintain dispatch performance.
+          </p>
+        </div>
+        
+        <div class="flex justify-between items-center pt-4 border-t border-[#2D3142]">
+          <button @click="dismissTutorial" class="text-xs text-[#94A3B8] hover:text-white font-mono uppercase tracking-wider transition">Dismiss Guide</button>
+          <button @click="nextStep" class="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs rounded font-bold transition shadow-lg shadow-blue-500/20 uppercase tracking-wider font-mono">
+            {{ tutorialStep < 2 ? 'Next Hub' : 'Finish Tour' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -133,6 +162,22 @@ import { useToast } from '../../composables/useToast';
 import { useApiResource } from '../../composables/useApiResource';
 
 const { showToast } = useToast();
+
+const showTutorial = ref(!localStorage.getItem('hasVisitedTransitOps'));
+const tutorialStep = ref(0);
+
+const nextStep = () => {
+  if (tutorialStep.value < 2) {
+    tutorialStep.value++;
+  } else {
+    dismissTutorial();
+  }
+};
+
+const dismissTutorial = () => {
+  showTutorial.value = false;
+  localStorage.setItem('hasVisitedTransitOps', 'true');
+};
 
 const filters = reactive({
   type: 'All',
