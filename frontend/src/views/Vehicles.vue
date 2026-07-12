@@ -1,22 +1,26 @@
 <template>
   <div class="vehicles-container">
+    <!-- Page Header -->
     <div class="page-header">
       <div>
         <h1>Vehicle Registry</h1>
         <p class="subtitle">Manage company vehicles and operational status</p>
       </div>
-      <button @click="showAddModal = true" class="btn-primary">+ Add Vehicle</button>
+      <button @click="showAddModal = true" class="btn-primary">
+        <span class="plus-icon">+</span> Add Vehicle
+      </button>
     </div>
 
-    <!-- Info message mapping to evaluation business rules -->
+    <!-- Compliance Banner -->
     <div class="info-banner">
       <span class="info-icon">ℹ</span>
       <p><strong>Business Rules:</strong> Registration No. must be unique. Retired or In Shop vehicles are automatically filtered out from the Trip Dispatch dispatcher pool.</p>
     </div>
 
-    <!-- Filters & Search -->
+    <!-- Table Action Controls -->
     <div class="table-actions">
       <div class="search-box">
+        <span class="search-icon">🔍</span>
         <input
           type="text"
           v-model="searchQuery"
@@ -40,7 +44,7 @@
       </div>
     </div>
 
-    <!-- Data Table -->
+    <!-- Data Table Container -->
     <div class="table-card">
       <table class="data-table">
         <thead>
@@ -57,14 +61,16 @@
         </thead>
         <tbody>
           <tr v-for="vehicle in filteredVehicles" :key="vehicle.regNo">
-            <td class="font-mono">{{ vehicle.regNo }}</td>
+            <td class="font-mono highlight-text">{{ vehicle.regNo }}</td>
             <td>{{ vehicle.model }}</td>
-            <td>{{ vehicle.type }}</td>
+            <td>
+              <span class="type-tag">{{ vehicle.type }}</span>
+            </td>
             <td>{{ vehicle.maxLoad.toLocaleString() }}</td>
             <td>{{ vehicle.odometer.toLocaleString() }}</td>
             <td>${{ vehicle.acquisitionCost.toLocaleString() }}</td>
             <td>
-              <span class="status-badge" :class="vehicle.status.toLowerCase().replace(' ', '-')">
+              <span class="badge" :class="statusBadgeClass(vehicle.status)">
                 {{ vehicle.status }}
               </span>
             </td>
@@ -79,18 +85,21 @@
       </table>
     </div>
 
-    <!-- Add/Edit Vehicle Modal (Placeholder) -->
-    <div v-if="showAddModal" class="modal-overlay">
+    <!-- Modal Form -->
+    <div v-if="showAddModal" class="modal-overlay" @click.self="showAddModal = false">
       <div class="modal">
-        <h3>Add New Vehicle</h3>
+        <div class="modal-header">
+          <h3>Add New Vehicle</h3>
+          <button @click="showAddModal = false" class="close-btn">&times;</button>
+        </div>
         <form @submit.prevent="saveVehicle">
           <div class="form-group">
             <label>Registration Number</label>
-            <input type="text" v-model="newVehicle.regNo" placeholder="e.g. TN-05-A-1234" required />
+            <input type="text" v-model="newVehicle.regNo" placeholder="e.g. VAN-05" required />
           </div>
           <div class="form-group">
             <label>Name/Model</label>
-            <input type="text" v-model="newVehicle.model" placeholder="e.g. Ford Transit" required />
+            <input type="text" v-model="newVehicle.model" placeholder="e.g. Ford Transit 350" required />
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -162,8 +171,14 @@ const filteredVehicles = computed(() => {
   });
 });
 
+const statusBadgeClass = (status) => {
+  if (status === 'Available') return 'badge-success';
+  if (status === 'On Trip') return 'badge-info';
+  if (status === 'In Shop') return 'badge-warning';
+  return 'badge-danger';
+};
+
 const saveVehicle = () => {
-  // Check unique registration number constraint
   const exists = vehicles.value.some(v => v.regNo.toLowerCase() === newVehicle.regNo.toLowerCase());
   if (exists) {
     alert('Registration No. must be unique');
@@ -172,7 +187,6 @@ const saveVehicle = () => {
   
   vehicles.value.push({ ...newVehicle });
   showAddModal.value = false;
-  // Reset fields
   newVehicle.regNo = '';
   newVehicle.model = '';
   newVehicle.maxLoad = 500;
@@ -199,36 +213,35 @@ const editVehicle = (vehicle) => {
 }
 
 .page-header h1 {
+  font-size: 2.25rem;
   margin: 0;
-  font-size: 1.75rem;
-  color: var(--text-h);
 }
 
 .subtitle {
-  margin: 0.25rem 0 0 0;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+}
+
+.plus-icon {
+  margin-right: 0.25rem;
+  font-weight: 700;
 }
 
 .info-banner {
-  background-color: rgba(170, 59, 255, 0.05);
-  border: 1px solid rgba(170, 59, 255, 0.2);
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
+  background-color: var(--primary-glow);
+  border: 1px solid rgba(170, 59, 255, 0.15);
+  padding: 1rem 1.25rem;
+  border-radius: var(--border-radius-md);
   display: flex;
   gap: 0.75rem;
-  align-items: flex-start;
-  font-size: 0.85rem;
-  color: var(--text-h);
-}
-
-.info-banner p {
-  margin: 0;
+  align-items: center;
+  font-size: 0.9rem;
 }
 
 .info-icon {
-  color: var(--accent);
-  font-weight: bold;
+  color: var(--primary);
+  font-size: 1.1rem;
 }
 
 .table-actions {
@@ -238,197 +251,89 @@ const editVehicle = (vehicle) => {
   flex-wrap: wrap;
 }
 
-.search-box input {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  width: 300px;
-  background-color: var(--bg);
-  color: var(--text-h);
-  outline: none;
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.search-box input:focus {
-  border-color: var(--accent);
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--text-muted);
+}
+
+.search-box input {
+  padding-left: 2.75rem;
+  width: 320px;
 }
 
 .filter-group {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .filter-group select {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
-  font-size: 0.9rem;
-}
-
-.table-card {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  box-shadow: var(--shadow);
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.data-table th,
-.data-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.data-table th {
-  color: var(--text);
-  font-weight: 600;
-  background-color: var(--social-bg);
-}
-
-.data-table td {
-  color: var(--text-h);
+  width: auto;
+  cursor: pointer;
 }
 
 .font-mono {
   font-family: var(--mono);
-  font-weight: 600;
 }
 
-.status-badge {
+.highlight-text {
+  font-weight: 700;
+  color: #fff;
+}
+
+.type-tag {
+  background-color: var(--border-color);
   padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-}
-
-.status-badge.available {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.status-badge.on-trip {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-}
-
-.status-badge.in-shop {
-  background-color: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-}
-
-.status-badge.retired {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.btn-primary {
-  padding: 0.5rem 1rem;
-  background-color: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-secondary {
-  padding: 0.5rem 1rem;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text-h);
-  border-radius: 0.375rem;
-  font-weight: 600;
-  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.85rem;
+  color: var(--text-primary);
 }
 
 .btn-text {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--primary);
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.btn-text:hover {
+  color: var(--primary-hover);
 }
 
 .empty-row {
-  color: var(--text);
-  padding: 2rem;
+  color: var(--text-secondary);
+  padding: 3rem;
+  text-align: center;
 }
 
-/* Modal styling */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+/* Modal Styling Extensions */
+.modal-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  margin-bottom: 1.5rem;
 }
 
-.modal {
-  background-color: var(--bg);
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border);
-}
-
-.modal h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-h);
-}
-
-.form-group {
-  margin-bottom: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-}
-
-.modal label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.modal input,
-.modal select {
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  background-color: var(--bg);
-  color: var(--text-h);
-  outline: none;
-}
-
-.modal input:focus {
-  border-color: var(--accent);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
 }
 </style>
