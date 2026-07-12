@@ -30,12 +30,33 @@
     <!-- Form Side (Right) -->
     <div class="form-side">
       <div class="form-content">
-        <div class="header-block">
-          <h2>Welcome back</h2>
-          <p class="subtitle">Please enter your credentials to sign in</p>
+        <!-- Login/Register Selection Tabs -->
+        <div class="tabs-header">
+          <button 
+            @click="activeTab = 'signin'" 
+            class="tab-btn" 
+            :class="{ active: activeTab === 'signin' }"
+          >
+            Sign In
+          </button>
+          <button 
+            @click="activeTab = 'register'" 
+            class="tab-btn" 
+            :class="{ active: activeTab === 'register' }"
+          >
+            Register
+          </button>
         </div>
 
-        <form @submit.prevent="handleLogin" class="login-form">
+        <div class="header-block">
+          <h2>{{ activeTab === 'signin' ? 'Welcome back' : 'Create Account' }}</h2>
+          <p class="subtitle">
+            {{ activeTab === 'signin' ? 'Please enter your credentials to sign in' : 'Set up a new organizational profile' }}
+          </p>
+        </div>
+
+        <!-- SIGN IN FORM -->
+        <form v-if="activeTab === 'signin'" @submit.prevent="handleLogin" class="login-form">
           <div class="form-group">
             <label for="email">Email Address</label>
             <div class="input-wrapper">
@@ -64,19 +85,6 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="role">Role Permission Level</label>
-            <div class="input-wrapper">
-              <span class="input-icon">🛡️</span>
-              <select id="role" v-model="selectedRole">
-                <option value="Fleet Manager">Fleet Manager</option>
-                <option value="Dispatcher">Dispatcher</option>
-                <option value="Safety Officer">Safety Officer</option>
-                <option value="Financial Analyst">Financial Analyst</option>
-              </select>
-            </div>
-          </div>
-
           <div class="form-actions">
             <label class="remember-me">
               <input type="checkbox" v-model="rememberMe" />
@@ -89,12 +97,81 @@
 
           <div v-if="errorMessage" class="error-message">
             <span class="err-icon">⚠️</span>
-            <span>{{ errorMessage }}</span>
+            <span class="err-text">{{ errorMessage }}</span>
           </div>
 
           <button type="submit" class="btn-primary btn-login" :disabled="loading">
             <span v-if="loading" class="spinner"></span>
             <span>{{ loading ? 'Signing in...' : 'Sign In' }}</span>
+          </button>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form v-else @submit.prevent="handleRegister" class="login-form">
+          <div class="form-group">
+            <label for="reg-email">Email Address</label>
+            <div class="input-wrapper">
+              <span class="input-icon">✉</span>
+              <input
+                type="email"
+                id="reg-email"
+                v-model="regEmail"
+                required
+                placeholder="user@transitops.dev"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-password">Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔑</span>
+              <input
+                type="password"
+                id="reg-password"
+                v-model="regPassword"
+                required
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-confirm">Confirm Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input
+                type="password"
+                id="reg-confirm"
+                v-model="regConfirmPassword"
+                required
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-role">Role Permission Level</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🛡️</span>
+              <select id="reg-role" v-model="regRole">
+                <option value="Fleet Manager">Fleet Manager</option>
+                <option value="Dispatcher">Dispatcher</option>
+                <option value="Safety Officer">Safety Officer</option>
+                <option value="Financial Analyst">Financial Analyst</option>
+                <option value="Driver">Driver (Trips &amp; Dashboard only)</option>
+              </select>
+            </div>
+          </div>
+
+          <div v-if="regErrorMessage" class="error-message">
+            <span class="err-icon">⚠️</span>
+            <span class="err-text">{{ regErrorMessage }}</span>
+          </div>
+
+          <button type="submit" class="btn-primary btn-login" :disabled="loading">
+            <span v-if="loading" class="spinner"></span>
+            <span>{{ loading ? 'Creating account...' : 'Register User' }}</span>
           </button>
         </form>
       </div>
@@ -103,43 +180,213 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useToast } from '../composables/useToast';
 
 const router = useRouter();
+const { showToast } = useToast();
 
+const activeTab = ref('signin');
+
+// Sign In Fields
 const email = ref('');
 const password = ref('');
-const selectedRole = ref('Fleet Manager');
 const rememberMe = ref(false);
 const loading = ref(false);
 const errorMessage = ref('');
 
+// Registration Fields
+const regEmail = ref('');
+const regPassword = ref('');
+const regConfirmPassword = ref('');
+const regRole = ref('Fleet Manager');
+const regErrorMessage = ref('');
+
+// Load remembered email
+onMounted(() => {
+  const savedEmail = localStorage.getItem('transitops_remembered_email');
+  if (savedEmail) {
+    email.value = savedEmail;
+    rememberMe.value = true;
+  }
+});
+
+// Input Sanitization helper (OWASP XSS / Injection Mitigation)
+const sanitizeInput = (val) => {
+  if (!val) return '';
+  // Basic scrubbing of potential HTML tags and script injections
+  return val.trim().replace(/[<>'"&]/g, (match) => {
+    const map = {
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;',
+      '&': '&amp;'
+    };
+    return map[match];
+  });
+};
+
 const handleLogin = async () => {
   loading.value = true;
   errorMessage.value = '';
-  
-  // Simulate network request
+
+  const cleanEmail = sanitizeInput(email.value);
+  const cleanPassword = sanitizeInput(password.value);
+
+  if (!cleanEmail || !cleanPassword) {
+    errorMessage.value = 'Email and password are required.';
+    loading.value = false;
+    return;
+  }
+
+  // OWASP: Client-Side Lockout Security check
+  const lockoutKey = `lockout_until_${cleanEmail}`;
+  const attemptsKey = `login_attempts_${cleanEmail}`;
+  const lockoutTime = localStorage.getItem(lockoutKey);
+
+  if (lockoutTime && parseInt(lockoutTime) > Date.now()) {
+    const remaining = Math.round((parseInt(lockoutTime) - Date.now()) / 1000);
+    errorMessage.value = `Invalid credentials. Account locked after 5 failed attempts. Please retry in ${remaining}s.`;
+    loading.value = false;
+    return;
+  }
+
   setTimeout(() => {
     loading.value = false;
-    
-    // Check credentials (mock check for scaffold)
-    if (email.value && password.value) {
-      localStorage.setItem('transitops_token', 'mock-jwt-token');
+
+    // Default seeded credentials
+    const defaultAccounts = {
+      'fleetmanager@transitops.dev': { password: 'password123', role: 'Fleet Manager' },
+      'driver@transitops.dev': { password: 'password123', role: 'Driver' },
+      'safety@transitops.dev': { password: 'password123', role: 'Safety Officer' },
+      'finance@transitops.dev': { password: 'password123', role: 'Financial Analyst' },
+      'admin@transitops.dev': { password: 'password123', role: 'Fleet Manager' }
+    };
+
+    // Retrieve custom registered accounts
+    let registeredAccounts = [];
+    try {
+      const stored = localStorage.getItem('transitops_accounts');
+      if (stored) registeredAccounts = JSON.parse(stored);
+    } catch (e) {
+      console.error('Failed to parse registered accounts', e);
+    }
+
+    // Find account
+    let matchedAccount = defaultAccounts[cleanEmail];
+    if (!matchedAccount) {
+      matchedAccount = registeredAccounts.find(acc => acc.email === cleanEmail);
+    }
+
+    // Match validation
+    if (matchedAccount && matchedAccount.password === cleanPassword) {
+      // Clear failed login attempts counter
+      localStorage.removeItem(attemptsKey);
+      localStorage.removeItem(lockoutKey);
+
+      // Remember me logic
+      if (rememberMe.value) {
+        localStorage.setItem('transitops_remembered_email', cleanEmail);
+      } else {
+        localStorage.removeItem('transitops_remembered_email');
+      }
+
+      // Save session
+      localStorage.setItem('transitops_token', 'mock-jwt-token-' + Math.random().toString(36).substr(2));
       localStorage.setItem('transitops_user', JSON.stringify({
-        email: email.value,
-        role: selectedRole.value
+        email: cleanEmail,
+        role: matchedAccount.role
       }));
-      
+
+      showToast('Logged in successfully!', 'success');
       router.push('/dashboard');
     } else {
-      errorMessage.value = 'Invalid credentials. Account locked after 5 failed attempts.';
+      // Increment failed login count
+      const attempts = (parseInt(localStorage.getItem(attemptsKey)) || 0) + 1;
+      localStorage.setItem(attemptsKey, attempts.toString());
+
+      if (attempts >= 5) {
+        const lockoutExpiration = Date.now() + 30000; // 30 seconds block
+        localStorage.setItem(lockoutKey, lockoutExpiration.toString());
+        errorMessage.value = 'Invalid credentials. Account locked after 5 failed attempts.';
+        showToast('Login blocked: account locked for 30 seconds.', 'error');
+      } else {
+        const remainingAttempts = 5 - attempts;
+        errorMessage.value = `Invalid credentials. ${remainingAttempts} attempts remaining.`;
+      }
     }
-  }, 1000);
+  }, 800);
+};
+
+const handleRegister = async () => {
+  regErrorMessage.value = '';
+  loading.value = true;
+
+  const cleanEmail = sanitizeInput(regEmail.value);
+  const cleanPassword = sanitizeInput(regPassword.value);
+  const cleanConfirm = sanitizeInput(regConfirmPassword.value);
+
+  // Validate passwords match
+  if (cleanPassword !== cleanConfirm) {
+    regErrorMessage.value = 'Passwords do not match.';
+    loading.value = false;
+    return;
+  }
+
+  // Password length constraint check (minimum 6 chars)
+  if (cleanPassword.length < 6) {
+    regErrorMessage.value = 'Password must be at least 6 characters.';
+    loading.value = false;
+    return;
+  }
+
+  setTimeout(() => {
+    loading.value = false;
+
+    // Load registered list
+    let registeredAccounts = [];
+    try {
+      const stored = localStorage.getItem('transitops_accounts');
+      if (stored) registeredAccounts = JSON.parse(stored);
+    } catch (e) {
+      registeredAccounts = [];
+    }
+
+    // Check duplicate
+    const isSeedEmail = ['fleetmanager@transitops.dev', 'driver@transitops.dev', 'safety@transitops.dev', 'finance@transitops.dev', 'admin@transitops.dev'].includes(cleanEmail);
+    const isRegisteredEmail = registeredAccounts.some(acc => acc.email === cleanEmail);
+
+    if (isSeedEmail || isRegisteredEmail) {
+      regErrorMessage.value = 'Account email already exists.';
+      return;
+    }
+
+    // Register user
+    registeredAccounts.push({
+      email: cleanEmail,
+      password: cleanPassword,
+      role: regRole.value
+    });
+
+    localStorage.setItem('transitops_accounts', JSON.stringify(registeredAccounts));
+    showToast('Registration successful! Please log in.', 'success');
+
+    // Switch tab to signin
+    activeTab.value = 'signin';
+    email.value = cleanEmail;
+    password.value = '';
+    
+    // Clear registration fields
+    regEmail.value = '';
+    regPassword.value = '';
+    regConfirmPassword.value = '';
+  }, 800);
 };
 
 const handleForgotPassword = () => {
-  alert('Password reset link has been simulated to your email.');
+  showToast('Simulated: A password reset link has been dispatched to your address.', 'info');
 };
 </script>
 
@@ -244,8 +491,35 @@ const handleForgotPassword = () => {
   max-width: 400px;
 }
 
+.tabs-header {
+  display: flex;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  padding: 0.25rem;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 2rem;
+}
+
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.5rem 0;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  background-color: var(--card-bg);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
 .header-block {
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 
 .header-block h2 {
