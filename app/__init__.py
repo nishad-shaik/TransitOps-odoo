@@ -1,13 +1,3 @@
-"""
-TransitOps — database initialization
-
-Usage:
-    export DATABASE_URL="postgresql+psycopg://user:password@localhost:5432/transitops"
-    python init_db.py            # create all tables
-    python init_db.py --seed     # create tables + insert sample data
-    python init_db.py --drop     # drop all tables first (dev only!)
-"""
-
 import argparse
 import os
 import random
@@ -36,12 +26,12 @@ from models import (
     VehicleStatus,
 )
 
-DEFAULT_DB_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/transitops"
+DEFAULT_DB_URL = "mysql+pymysql://root:password@localhost:3306/transitops"
 
 
 def get_engine():
     db_url = os.environ.get("DATABASE_URL", DEFAULT_DB_URL)
-    return create_engine(db_url, echo=False, future=True)
+    return create_engine(db_url, echo=False, future=True, pool_pre_ping=True, pool_recycle=280)
 
 
 def init_schema(engine, drop_first: bool = False):
@@ -98,7 +88,7 @@ def seed_data(engine):
         print("Seeding sample data...")
         now = datetime.now(timezone.utc)
 
-        # -- Users -----------------------------------------------------
+        # Users
         users = [
             User(email="admin@transitops.dev", password_hash=bcrypt.hash("password123"), role=UserRole.admin),
             User(email="dispatcher@transitops.dev", password_hash=bcrypt.hash("password123"), role=UserRole.dispatcher),
@@ -111,7 +101,7 @@ def seed_data(engine):
         session.add_all(users + driver_logins)
         session.flush()
 
-        # -- Vehicles ----------------------------------------------------
+        #  Vehicles 
         # Fixed status plan so the current dashboard state is predictable:
         # 10 Available, 3 On Trip, 3 Maintenance, 2 Retired = 18 vehicles.
         status_plan = (
@@ -146,8 +136,7 @@ def seed_data(engine):
 
         vehicles_by_status = {s: [v for v in vehicles if v.status == s] for s in VehicleStatus}
 
-        # -- Drivers -------------------------------------------------------
-        # 9 Available, 3 On Trip, 2 Off Duty, 2 Suspended = 16 drivers.
+        # Drivers
         driver_status_plan = (
             [DriverStatus.available] * 9
             + [DriverStatus.on_trip] * 3
@@ -164,8 +153,6 @@ def seed_data(engine):
                 if name not in used_names:
                     used_names.add(name)
                     break
-            # Edge case: one Available driver has an EXPIRED license — status alone
-            # doesn't block dispatch, so the app layer must check expiry separately.
             is_expired_case = (status == DriverStatus.available and idx == 0)
             expiry = (
                 date.today() - timedelta(days=30)
@@ -187,10 +174,7 @@ def seed_data(engine):
 
         drivers_by_status = {s: [d for d in drivers if d.status == s] for s in DriverStatus}
 
-        # -- Maintenance ---------------------------------------------------
-        # Every "Maintenance"-status vehicle needs an Open record (this is what
-        # keeps it out of the dispatch pool). A handful of other vehicles get
-        # closed historical records for realistic cost history.
+        # Maintenance 
         maintenance_records = []
         for v in vehicles_by_status[VehicleStatus.maintenance]:
             maintenance_records.append(Maintenance(
@@ -213,13 +197,12 @@ def seed_data(engine):
             ))
         session.add_all(maintenance_records)
 
-        # -- Trips -----------------------------------------------------------
+        # Trips
         trips = []
 
         def cargo_for(vehicle):
             return round(float(vehicle.max_load_capacity) * random.uniform(0.2, 0.9), 2)
 
-        # Ongoing: pairs the 3 "On Trip" vehicles with the 3 "On Trip" drivers.
         on_trip_drivers = drivers_by_status[DriverStatus.on_trip][:]
         random.shuffle(on_trip_drivers)
         for v, d in zip(vehicles_by_status[VehicleStatus.on_trip], on_trip_drivers):
@@ -231,8 +214,6 @@ def seed_data(engine):
                 start_time=now - timedelta(hours=random.randint(1, 6)),
             ))
 
-        # Scheduled: distinct Available vehicles/drivers not already committed
-        # to an active trip — respects the one-active-trip-per-asset rule.
         avail_vehicles = vehicles_by_status[VehicleStatus.available][:]
         avail_drivers = drivers_by_status[DriverStatus.available][:]
         random.shuffle(avail_vehicles)
@@ -247,8 +228,6 @@ def seed_data(engine):
                 start_time=now + timedelta(hours=random.randint(2, 72)),
             ))
 
-        # Completed: historical trips, freely reusing any vehicle/driver —
-        # the partial unique index only restricts Scheduled/Ongoing trips.
         for _ in range(30):
             v = random.choice(vehicles)
             d = random.choice(drivers)
@@ -264,7 +243,6 @@ def seed_data(engine):
                 start_time=start, end_time=start + duration,
             ))
 
-        # Cancelled: a few, historical, no completion data.
         for _ in range(5):
             v = random.choice(vehicles)
             d = random.choice(drivers)
@@ -279,7 +257,7 @@ def seed_data(engine):
         session.add_all(trips)
         session.flush()
 
-        # -- Fuel logs -------------------------------------------------------
+        # Fuel logs
         fuel_logs = []
         completed_trips = [t for t in trips if t.status == TripStatus.completed]
         for t in random.sample(completed_trips, k=min(20, len(completed_trips))):
@@ -290,7 +268,7 @@ def seed_data(engine):
                 odometer_at_fuel=random.randint(2000, 90000),
                 logged_at=t.end_time or t.start_time,
             ))
-        # Standalone top-ups not tied to any single trip.
+        
         for v in random.sample(vehicles, 10):
             liters = round(random.uniform(10, 100), 2)
             fuel_logs.append(FuelLog(
@@ -301,7 +279,7 @@ def seed_data(engine):
             ))
         session.add_all(fuel_logs)
 
-        # -- Expenses ----------------------------------------------------------
+        # Expenses 
         expenses = []
         for t in random.sample(completed_trips, k=min(15, len(completed_trips))):
             expenses.append(Expense(
