@@ -29,10 +29,10 @@
         <div class="form-row">
           <div class="form-group">
             <label>Select Vehicle (Available only)</label>
-            <select v-model="selectedVehicleIndex" @change="checkCapacity">
+            <select v-model="selectedVehicleIndex" @change="handleVehicleChange">
               <option value="-1">-- Choose Vehicle --</option>
               <option v-for="(v, index) in availableVehicles" :key="v.regNo" :value="index">
-                {{ v.regNo }} - {{ v.model }} (Max Load: {{ v.maxLoad }}kg)
+                {{ v.regNo }} - {{ v.model }} (Max Load: {{ v.maxLoad }}kg | Status: {{ v.status }})
               </option>
             </select>
           </div>
@@ -41,7 +41,7 @@
             <select v-model="selectedDriverIndex">
               <option value="-1">-- Choose Driver --</option>
               <option v-for="(d, index) in availableDrivers" :key="d.licenseNo" :value="index">
-                {{ d.name }} (Score: {{ d.safetyScore }})
+                {{ d.name }} (Score: {{ d.safetyScore }} | Expiry: {{ d.licenseExpiry }})
               </option>
             </select>
           </div>
@@ -54,7 +54,7 @@
             <input
               type="number"
               v-model.number="newTrip.cargoWeight"
-              @input="checkCapacity"
+              @input="validateTripCapacity"
               required
             />
             
@@ -88,7 +88,7 @@
 
         <div class="form-actions">
           <button type="button" @click="showCreateForm = false" class="btn-secondary">Cancel</button>
-          <button type="submit" class="btn-primary" :disabled="!!validationError || selectedVehicleIndex == -1 || selectedDriverIndex == -1">
+          <button type="submit" class="btn-primary">
             Dispatch Trip
           </button>
         </div>
@@ -159,6 +159,90 @@
       </div>
     </div>
 
+    <!-- Trip Log History Grid (Desktop: Comprehensive table / Mobile: Condensed expandable accordion) -->
+    <div class="card grid-card mt-6">
+      <div class="grid-header">
+        <h3>Trip Log Registry</h3>
+        <span class="row-count">Records: {{ trips.length }}</span>
+      </div>
+
+      <!-- Desktop View (md and above) -->
+      <div class="table-wrapper hidden md:block">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Trip ID</th>
+              <th>Route</th>
+              <th>Vehicle</th>
+              <th>Driver</th>
+              <th>Cargo Weight</th>
+              <th>Distance</th>
+              <th>Status</th>
+              <th>ETA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in trips" :key="t.id">
+              <td class="font-mono highlight-text">#{{ t.id }}</td>
+              <td>{{ t.source }} &rarr; {{ t.destination }}</td>
+              <td>{{ t.vehicle || 'Not assigned' }}</td>
+              <td>{{ t.driver || 'Not assigned' }}</td>
+              <td>{{ t.cargoWeight }} kg</td>
+              <td>{{ t.plannedDistance }} km</td>
+              <td>
+                <span class="badge" :class="badgeClass(t.status)">
+                  {{ t.status }}
+                </span>
+              </td>
+              <td>{{ t.eta || 'N/A' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile View (hidden on md and above) -->
+      <div class="mobile-accordion-list block md:hidden">
+        <div 
+          v-for="t in trips" 
+          :key="'mobile-trip-' + t.id" 
+          class="card mobile-accordion-card"
+          :class="{ expanded: expandedTrips.includes(t.id) }"
+        >
+          <!-- Accordion Header: 3 Vital columns only -->
+          <div class="accordion-header" @click="toggleTripAccordion(t.id)">
+            <div class="vital-col font-mono font-bold text-white">#{{ t.id }} - {{ t.driver || 'Unassigned' }}</div>
+            <div class="vital-col">
+              <span class="badge" :class="badgeClass(t.status)">
+                {{ t.status }}
+              </span>
+            </div>
+            <div class="vital-col text-right pr-4 font-bold">{{ t.plannedDistance }} km</div>
+            <span class="chevron">&#9662;</span>
+          </div>
+
+          <!-- Accordion Content -->
+          <div class="accordion-content" v-if="expandedTrips.includes(t.id)">
+            <div class="meta-row">
+              <span class="lbl">Route:</span>
+              <span class="val">{{ t.source }} &rarr; {{ t.destination }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="lbl">Vehicle:</span>
+              <span class="val">{{ t.vehicle || 'Unassigned' }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="lbl">Cargo Load Weight:</span>
+              <span class="val font-mono">{{ t.cargoWeight }} kg</span>
+            </div>
+            <div class="meta-row">
+              <span class="lbl">Estimated ETA:</span>
+              <span class="val font-mono">{{ t.eta || 'N/A' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Two-Step Dispatch Confirmation Modal -->
     <div v-if="showConfirmModal" class="modal-overlay" @click.self="showConfirmModal = false">
       <div class="modal confirm-modal">
@@ -192,7 +276,9 @@
 
         <div class="modal-actions">
           <button @click="showConfirmModal = false" class="btn-secondary">Cancel</button>
-          <button @click="dispatchTrip" class="btn-primary">Confirm &amp; Dispatch</button>
+          <button @click="dispatchTrip" class="btn-primary" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Dispatching...' : 'Confirm & Dispatch' }}
+          </button>
         </div>
       </div>
     </div>
@@ -210,20 +296,29 @@ const showConfirmModal = ref(false);
 const selectedVehicleIndex = ref(-1);
 const selectedDriverIndex = ref(-1);
 const validationError = ref('');
+const isSubmitting = ref(false);
+const expandedTrips = ref([]);
 
+// Available Vehicles Pool with varying compliance statuses
 const availableVehicles = ref([
-  { regNo: 'VAN-05', model: 'Ford Transit 350', maxLoad: 500 },
-  { regNo: 'SDN-01', model: 'Toyota Camry hybrid', maxLoad: 350 }
+  { regNo: 'VAN-05', model: 'Ford Transit 350', maxLoad: 500, status: 'Available' },
+  { regNo: 'SDN-01', model: 'Toyota Camry hybrid', maxLoad: 350, status: 'Available' },
+  { regNo: 'TRK-02', model: 'Volvo FH16 Heavy', maxLoad: 2500, status: 'In Shop' }, // In Shop
+  { regNo: 'TRK-04', model: 'Scania R500 Flatbed', maxLoad: 8000, status: 'Retired' }, // Retired
+  { regNo: 'VAN-01', model: 'Ram ProMaster', maxLoad: 600, status: 'On Trip' } // On Trip
 ]);
 
+// Available Drivers Pool with varying license statuses
 const availableDrivers = ref([
-  { name: 'Alex Johnson', licenseNo: 'DL-55291', safetyScore: 92 },
-  { name: 'Peter Parker', licenseNo: 'DL-12290', safetyScore: 95 }
+  { name: 'Alex Johnson', licenseNo: 'DL-55291', safetyScore: 92, status: 'Active', licenseExpiry: '2026-12-15' },
+  { name: 'Peter Parker', licenseNo: 'DL-12290', safetyScore: 95, status: 'Active', licenseExpiry: '2027-04-10' },
+  { name: 'Bruce Wayne', licenseNo: 'DL-00707', safetyScore: 88, status: 'Suspended', licenseExpiry: '2026-11-20' }, // Suspended
+  { name: 'Jack Torrance', licenseNo: 'DL-66611', safetyScore: 45, status: 'Active', licenseExpiry: '2026-01-15' } // Expired (mock date 2026-07-12)
 ]);
 
 const trips = ref([
   { id: 1045, source: 'Depot North', destination: 'Warehouse South', vehicle: 'VAN-05', driver: 'Alex Johnson', cargoWeight: 450, plannedDistance: 85, status: 'Dispatched', eta: '1h 15m' },
-  { id: 1044, source: 'Depot East', destination: 'Distribution Hub', vehicle: 'TRK-02', driver: 'Sarah Connor', cargoWeight: 2200, plannedDistance: 310, status: 'Completed' },
+  { id: 1044, source: 'Depot East', destination: 'Distribution Hub', vehicle: 'TRK-02', driver: 'Sarah Connor', cargoWeight: 2200, plannedDistance: 310, status: 'Completed', eta: 'Arrived' },
   { id: 1042, source: 'Depot West', destination: 'Airport Cargo Terminal', vehicle: null, driver: null, cargoWeight: 800, plannedDistance: 45, status: 'Draft' }
 ]);
 
@@ -233,6 +328,14 @@ const newTrip = reactive({
   cargoWeight: 0,
   plannedDistance: 0
 });
+
+const toggleTripAccordion = (id) => {
+  if (expandedTrips.value.includes(id)) {
+    expandedTrips.value = expandedTrips.value.filter(t => t !== id);
+  } else {
+    expandedTrips.value.push(id);
+  }
+};
 
 const getTripsByStatus = (status) => {
   return trips.value.filter(t => t.status === status);
@@ -253,7 +356,7 @@ const capacityPercentage = computed(() => {
   return (newTrip.cargoWeight / selectedVehicle.value.maxLoad) * 100;
 });
 
-const checkCapacity = () => {
+const validateTripCapacity = () => {
   validationError.value = '';
   if (selectedVehicle.value) {
     if (newTrip.cargoWeight > selectedVehicle.value.maxLoad) {
@@ -263,58 +366,112 @@ const checkCapacity = () => {
   }
 };
 
+const handleVehicleChange = () => {
+  validateTripCapacity();
+};
+
+// Hard business rules client validations on local clones
+const validateOperationalRules = () => {
+  if (selectedVehicleIndex.value === -1 || selectedDriverIndex.value === -1) {
+    showToast('Validation Error: Select both a vehicle and a driver.', 'error');
+    return false;
+  }
+
+  // Clone local references
+  const vehicle = { ...availableVehicles.value[selectedVehicleIndex.value] };
+  const driver = { ...availableDrivers.value[selectedDriverIndex.value] };
+  const weight = Number(newTrip.cargoWeight);
+
+  // 1. Capacity weight check
+  if (weight > vehicle.maxLoad) {
+    showToast(`Validation Error: Cargo Weight (${weight}kg) exceeds selected vehicle's Maximum Load Capacity (${vehicle.maxLoad}kg).`, 'error');
+    return false;
+  }
+
+  // 2. Driver status and license validity checks
+  const mockCurrentDate = new Date('2026-07-12');
+  const expiryDate = new Date(driver.licenseExpiry);
+  if (driver.status === 'Suspended' || expiryDate < mockCurrentDate) {
+    showToast(`Security Alert: Selected driver (${driver.name}) is Suspended or has an Expired license (${driver.licenseExpiry}).`, 'error');
+    return false;
+  }
+
+  // 3. Busy states check ("On Trip")
+  if (vehicle.status === 'On Trip' || driver.status === 'On Trip') {
+    showToast('Operation Blocked: Selected vehicle or driver is currently On Trip.', 'error');
+    return false;
+  }
+
+  // 4. Shop or Retired state check
+  if (vehicle.status === 'In Shop' || vehicle.status === 'Retired') {
+    showToast(`Maintenance Blocked: Vehicle ${vehicle.regNo} has status '${vehicle.status}' and cannot be dispatched.`, 'error');
+    return false;
+  }
+
+  return true;
+};
+
 const openConfirmationModal = () => {
-  checkCapacity();
-  if (validationError.value) return;
+  if (!validateOperationalRules()) return;
   showConfirmModal.value = true;
 };
 
-const dispatchTrip = () => {
-  if (!selectedVehicle.value || !selectedDriver.value) return;
+// Rate-limited dispatch logic (Duplicate submissions prevention)
+const dispatchTrip = async () => {
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
 
-  const dispatchedRecord = {
-    id: trips.value.length + 1041,
-    source: newTrip.source,
-    destination: newTrip.destination,
-    vehicle: selectedVehicle.value.regNo,
-    driver: selectedDriver.value.name,
-    cargoWeight: newTrip.cargoWeight,
-    plannedDistance: newTrip.plannedDistance,
-    status: 'Dispatched',
-    eta: 'Calculation pending'
-  };
+  setTimeout(() => {
+    const vehicle = availableVehicles.value[selectedVehicleIndex.value];
+    const driver = availableDrivers.value[selectedDriverIndex.value];
 
-  trips.value.push(dispatchedRecord);
-  
-  // Remove vehicle and driver from available lists
-  availableVehicles.value.splice(selectedVehicleIndex.value, 1);
-  availableDrivers.value.splice(selectedDriverIndex.value, 1);
+    const dispatchedRecord = {
+      id: trips.value.length + 1041,
+      source: String(newTrip.source).trim(),
+      destination: String(newTrip.destination).trim(),
+      vehicle: vehicle.regNo,
+      driver: driver.name,
+      cargoWeight: Number(newTrip.cargoWeight),
+      plannedDistance: Number(newTrip.plannedDistance),
+      status: 'Dispatched',
+      eta: '2h 30m'
+    };
 
-  // Reset indices and modal
-  selectedVehicleIndex.value = -1;
-  selectedDriverIndex.value = -1;
-  showConfirmModal.value = false;
-  showCreateForm.value = false;
+    trips.value.push(dispatchedRecord);
+    
+    // Remove vehicle and driver from available lists
+    availableVehicles.value.splice(selectedVehicleIndex.value, 1);
+    availableDrivers.value.splice(selectedDriverIndex.value, 1);
 
-  newTrip.source = '';
-  newTrip.destination = '';
-  newTrip.cargoWeight = 0;
-  newTrip.plannedDistance = 0;
-  
-  showToast('Fleet dispatch started successfully!', 'success');
+    // Reset indices and modal
+    selectedVehicleIndex.value = -1;
+    selectedDriverIndex.value = -1;
+    showConfirmModal.value = false;
+    showCreateForm.value = false;
+
+    newTrip.source = '';
+    newTrip.destination = '';
+    newTrip.cargoWeight = 0;
+    newTrip.plannedDistance = 0;
+    
+    showToast('Fleet dispatch started successfully!', 'success');
+    isSubmitting.value = false;
+  }, 1000);
 };
 
 const completeTrip = (trip) => {
   trip.status = 'Completed';
-  availableVehicles.value.push({ regNo: trip.vehicle, model: 'Restored vehicle', maxLoad: trip.cargoWeight + 200 });
-  availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL', safetyScore: 85 });
+  trip.eta = 'Arrived';
+  availableVehicles.value.push({ regNo: trip.vehicle, model: 'Fleet Restored', maxLoad: 800, status: 'Available' });
+  availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL-RESTORED', safetyScore: 85, status: 'Active', licenseExpiry: '2027-09-20' });
   showToast('Trip dispatches completed successfully and logged!', 'success');
 };
 
 const cancelTrip = (trip) => {
   trip.status = 'Cancelled';
-  availableVehicles.value.push({ regNo: trip.vehicle, model: 'Restored vehicle', maxLoad: trip.cargoWeight + 200 });
-  availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL', safetyScore: 85 });
+  trip.eta = 'Cancelled';
+  availableVehicles.value.push({ regNo: trip.vehicle, model: 'Fleet Restored', maxLoad: 800, status: 'Available' });
+  availableDrivers.value.push({ name: trip.driver, licenseNo: 'MOCK-DL-RESTORED', safetyScore: 85, status: 'Active', licenseExpiry: '2027-09-20' });
   showToast('Trip assignment cancelled.', 'info');
 };
 
@@ -324,6 +481,13 @@ const selectForEdit = (trip) => {
   newTrip.cargoWeight = trip.cargoWeight;
   newTrip.plannedDistance = trip.plannedDistance;
   showCreateForm.value = true;
+};
+
+const badgeClass = (status) => {
+  if (status === 'Dispatched') return 'badge-info';
+  if (status === 'Completed') return 'badge-success';
+  if (status === 'Draft') return 'badge-warning';
+  return 'badge-danger';
 };
 </script>
 
@@ -566,7 +730,7 @@ const selectForEdit = (trip) => {
   border-radius: var(--border-radius-md);
 }
 
-/* Confirmation modal custom overrides */
+/* Modal Styling overrides */
 .confirm-modal {
   max-width: 480px;
 }
@@ -610,6 +774,102 @@ const selectForEdit = (trip) => {
   justify-content: flex-end;
   gap: 1rem;
   margin-top: 1.5rem;
+}
+
+.grid-card {
+  padding: 1.5rem;
+}
+
+.grid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.grid-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.row-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  background-color: rgba(255,255,255,0.02);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.mt-6 {
+  margin-top: 1.75rem;
+}
+
+/* Mobile Accordions */
+.mobile-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-accordion-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--border-radius-md);
+  transition: border-color 0.2s ease;
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+}
+
+.vital-col {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.chevron {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.mobile-accordion-card.expanded .chevron {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  background-color: rgba(255, 255, 255, 0.01);
+  border-top: 1px solid var(--border-color);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.meta-row .lbl {
+  color: var(--text-secondary);
+}
+
+.meta-row .val {
+  color: #fff;
+  font-weight: 600;
+}
+
+.text-white {
+  color: #fff;
 }
 
 @media (max-width: 950px) {

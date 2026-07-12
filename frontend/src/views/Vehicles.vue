@@ -44,8 +44,8 @@
       </div>
     </div>
 
-    <!-- Data Table Container -->
-    <div class="table-card">
+    <!-- Data Table Container (Desktop Only: md and above) -->
+    <div class="table-card hidden md:block">
       <table class="data-table">
         <thead>
           <tr>
@@ -83,6 +83,54 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Data Condensation List (Mobile Viewports: hidden on md and above) -->
+    <div class="mobile-accordion-list block md:hidden">
+      <div 
+        v-for="vehicle in filteredVehicles" 
+        :key="'mobile-' + vehicle.regNo" 
+        class="card mobile-accordion-card"
+        :class="{ expanded: expandedRegs.includes(vehicle.regNo) }"
+      >
+        <!-- Row Header: 3 Vital columns only -->
+        <div class="accordion-header" @click="toggleAccordion(vehicle.regNo)">
+          <div class="vital-col font-mono font-bold text-white">{{ vehicle.regNo }}</div>
+          <div class="vital-col">
+            <span class="badge" :class="statusBadgeClass(vehicle.status)">
+              {{ vehicle.status }}
+            </span>
+          </div>
+          <div class="vital-col text-right pr-4 font-bold">{{ vehicle.odometer.toLocaleString() }} km</div>
+          <span class="chevron">&#9662;</span>
+        </div>
+
+        <!-- Expanded Accordion Content -->
+        <div class="accordion-content" v-if="expandedRegs.includes(vehicle.regNo)">
+          <div class="meta-row">
+            <span class="lbl">Name/Model:</span>
+            <span class="val">{{ vehicle.model }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="lbl">Type:</span>
+            <span class="val">{{ vehicle.type }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="lbl">Max Load Capacity:</span>
+            <span class="val font-mono">{{ vehicle.maxLoad.toLocaleString() }} kg</span>
+          </div>
+          <div class="meta-row">
+            <span class="lbl">Acquisition Cost:</span>
+            <span class="val font-mono">${{ vehicle.acquisitionCost.toLocaleString() }}</span>
+          </div>
+          <div class="meta-row action-row">
+            <button @click="editVehicle(vehicle)" class="btn-sm btn-accent">Edit Vehicle</button>
+          </div>
+        </div>
+      </div>
+      <div v-if="filteredVehicles.length === 0" class="card empty-row">
+        No vehicles found matching criteria.
+      </div>
     </div>
 
     <!-- Modal Form -->
@@ -127,7 +175,9 @@
           </div>
           <div class="modal-actions">
             <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary">Save Vehicle</button>
+            <button type="submit" class="btn-primary" :disabled="isSubmitting">
+              {{ isSubmitting ? 'Saving...' : 'Save Vehicle' }}
+            </button>
           </div>
         </form>
       </div>
@@ -137,11 +187,16 @@
 
 <script setup>
 import { ref, computed, reactive } from 'vue';
+import { useToast } from '../composables/useToast';
+
+const { showToast } = useToast();
 
 const searchQuery = ref('');
 const filterType = ref('All');
 const filterStatus = ref('All');
 const showAddModal = ref(false);
+const isSubmitting = ref(false);
+const expandedRegs = ref([]);
 
 const vehicles = ref([
   { regNo: 'VAN-05', model: 'Ford Transit 350', type: 'Van', maxLoad: 500, odometer: 12450, acquisitionCost: 35000, status: 'Available' },
@@ -161,6 +216,14 @@ const newVehicle = reactive({
   status: 'Available'
 });
 
+const toggleAccordion = (regNo) => {
+  if (expandedRegs.value.includes(regNo)) {
+    expandedRegs.value = expandedRegs.value.filter(r => r !== regNo);
+  } else {
+    expandedRegs.value.push(regNo);
+  }
+};
+
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
     const matchesSearch = v.regNo.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
@@ -178,24 +241,47 @@ const statusBadgeClass = (status) => {
   return 'badge-danger';
 };
 
-const saveVehicle = () => {
-  const exists = vehicles.value.some(v => v.regNo.toLowerCase() === newVehicle.regNo.toLowerCase());
+const saveVehicle = async () => {
+  if (isSubmitting.value) return;
+  
+  // Clone state copies for tamper-resistant validations
+  const regNoCopy = String(newVehicle.regNo).trim();
+  const exists = vehicles.value.some(v => v.regNo.toLowerCase() === regNoCopy.toLowerCase());
+  
   if (exists) {
-    alert('Registration No. must be unique');
+    showToast('Validation Error: Registration Number must be unique.', 'error');
     return;
   }
+
+  isSubmitting.value = true;
   
-  vehicles.value.push({ ...newVehicle });
-  showAddModal.value = false;
-  newVehicle.regNo = '';
-  newVehicle.model = '';
-  newVehicle.maxLoad = 500;
-  newVehicle.odometer = 0;
-  newVehicle.acquisitionCost = 20000;
+  // Prevent duplicate submissions and trigger success toast
+  setTimeout(() => {
+    vehicles.value.push({
+      regNo: regNoCopy,
+      model: String(newVehicle.model).trim(),
+      type: newVehicle.type,
+      maxLoad: Number(newVehicle.maxLoad),
+      odometer: Number(newVehicle.odometer),
+      acquisitionCost: Number(newVehicle.acquisitionCost),
+      status: 'Available'
+    });
+    
+    showToast(`Vehicle ${regNoCopy} added successfully!`, 'success');
+    showAddModal.value = false;
+    isSubmitting.value = false;
+
+    // Reset Form
+    newVehicle.regNo = '';
+    newVehicle.model = '';
+    newVehicle.maxLoad = 500;
+    newVehicle.odometer = 0;
+    newVehicle.acquisitionCost = 20000;
+  }, 800);
 };
 
 const editVehicle = (vehicle) => {
-  alert(`Edit layout for ${vehicle.regNo} will be loaded here.`);
+  showToast(`Edit record loaded for ${vehicle.regNo}`, 'info');
 };
 </script>
 
@@ -313,6 +399,78 @@ const editVehicle = (vehicle) => {
   color: var(--text-secondary);
   padding: 3rem;
   text-align: center;
+}
+
+/* Mobile Accordion details */
+.mobile-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-accordion-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--border-radius-md);
+  transition: border-color 0.2s ease;
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+}
+
+.vital-col {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.chevron {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.mobile-accordion-card.expanded .chevron {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  background-color: rgba(255, 255, 255, 0.01);
+  border-top: 1px solid var(--border-color);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.meta-row .lbl {
+  color: var(--text-secondary);
+}
+
+.meta-row .val {
+  color: #fff;
+  font-weight: 600;
+}
+
+.action-row {
+  margin-top: 0.5rem;
+  justify-content: flex-end;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Modal Styling Extensions */

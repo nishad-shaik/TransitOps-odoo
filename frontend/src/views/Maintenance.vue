@@ -58,13 +58,15 @@
 
         <div class="form-actions">
           <button type="button" @click="showLogForm = false" class="btn-secondary">Cancel</button>
-          <button type="submit" class="btn-primary">Save Record</button>
+          <button type="submit" class="btn-primary" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Logging...' : 'Save Record' }}
+          </button>
         </div>
       </form>
     </div>
 
-    <!-- Service Logs Table -->
-    <div class="table-card">
+    <!-- Service Logs Table (Desktop: md and above) -->
+    <div class="table-card hidden md:block">
       <table class="data-table">
         <thead>
           <tr>
@@ -94,6 +96,7 @@
                 v-if="log.status === 'Active'"
                 @click="closeLog(log)"
                 class="btn-text"
+                :disabled="isSubmitting"
               >
                 Close Log
               </button>
@@ -106,13 +109,66 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Mobile Viewports (Expandable Accordions: hidden on md and above) -->
+    <div class="mobile-accordion-list block md:hidden">
+      <div 
+        v-for="log in logs" 
+        :key="'mobile-log-' + log.id" 
+        class="card mobile-accordion-card"
+        :class="{ expanded: expandedLogs.includes(log.id) }"
+      >
+        <!-- Accordion Header: 3 Vital columns only -->
+        <div class="accordion-header" @click="toggleLogAccordion(log.id)">
+          <div class="vital-col font-mono font-bold text-white">#{{ log.id }} - {{ log.vehicle }}</div>
+          <div class="vital-col">
+            <span class="badge" :class="statusBadgeClass(log.status)">
+              {{ log.status }}
+            </span>
+          </div>
+          <div class="vital-col text-right pr-4 font-bold">${{ log.cost.toLocaleString() }}</div>
+          <span class="chevron">&#9662;</span>
+        </div>
+
+        <!-- Expanded Content -->
+        <div class="accordion-content" v-if="expandedLogs.includes(log.id)">
+          <div class="meta-row">
+            <span class="lbl">Service Details:</span>
+            <span class="val">{{ log.serviceType }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="lbl">Log Date:</span>
+            <span class="val font-mono">{{ log.date }}</span>
+          </div>
+          <div class="meta-row action-row">
+            <button 
+              v-if="log.status === 'Active'" 
+              @click="closeLog(log)" 
+              class="btn-sm btn-accent"
+              :disabled="isSubmitting"
+            >
+              Close Log
+            </button>
+            <span v-else class="text-completed">Completed</span>
+          </div>
+        </div>
+      </div>
+      <div v-if="logs.length === 0" class="card empty-row">
+        No maintenance logs found.
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue';
+import { useToast } from '../composables/useToast';
+
+const { showToast } = useToast();
 
 const showLogForm = ref(false);
+const isSubmitting = ref(false);
+const expandedLogs = ref([]);
 
 const vehicles = ref([
   { regNo: 'VAN-05', model: 'Ford Transit 350', status: 'Available' },
@@ -133,40 +189,80 @@ const newLog = reactive({
   status: 'Active'
 });
 
+const toggleLogAccordion = (id) => {
+  if (expandedLogs.value.includes(id)) {
+    expandedLogs.value = expandedLogs.value.filter(l => l !== id);
+  } else {
+    expandedLogs.value.push(id);
+  }
+};
+
 const statusBadgeClass = (status) => {
   return status === 'Active' ? 'badge-warning' : 'badge-success';
 };
 
-const saveMaintenanceLog = () => {
-  const newId = logs.value.length > 0 ? Math.max(...logs.value.map(l => l.id)) + 1 : 201;
-  logs.value.unshift({
-    id: newId,
-    vehicle: newLog.vehicle,
-    serviceType: newLog.serviceType,
-    cost: newLog.cost,
-    date: newLog.date,
-    status: newLog.status
-  });
+const saveMaintenanceLog = async () => {
+  if (isSubmitting.value) return;
 
-  const targetVehicle = vehicles.value.find(v => v.regNo === newLog.vehicle);
-  if (targetVehicle && newLog.status === 'Active') {
-    targetVehicle.status = 'In Shop';
+  // Cloned checks for local tamper-resistant validation
+  const selectReg = String(newLog.vehicle);
+  const targetVehicle = vehicles.value.find(v => v.regNo === selectReg);
+
+  if (!targetVehicle) {
+    showToast('Validation Error: Selected vehicle registry not found.', 'error');
+    return;
   }
 
-  showLogForm.value = false;
+  // Hard Business Validation: Vehicle cannot be On Trip
+  if (targetVehicle.status === 'On Trip') {
+    showToast(`Validation Error: Cannot place vehicle ${selectReg} into active maintenance log because it is currently On Trip.`, 'error');
+    return;
+  }
 
-  newLog.vehicle = '';
-  newLog.serviceType = '';
-  newLog.cost = 0;
-  newLog.status = 'Active';
+  isSubmitting.value = true;
+
+  // Prevent duplicate submissions and trigger success toast
+  setTimeout(() => {
+    const newId = logs.value.length > 0 ? Math.max(...logs.value.map(l => l.id)) + 1 : 201;
+    
+    logs.value.unshift({
+      id: newId,
+      vehicle: selectReg,
+      serviceType: String(newLog.serviceType).trim(),
+      cost: Number(newLog.cost),
+      date: newLog.date,
+      status: newLog.status
+    });
+
+    if (newLog.status === 'Active') {
+      targetVehicle.status = 'In Shop';
+    }
+
+    showToast(`Maintenance log #${newId} recorded successfully!`, 'success');
+    showLogForm.value = false;
+    isSubmitting.value = false;
+
+    // Reset Form
+    newLog.vehicle = '';
+    newLog.serviceType = '';
+    newLog.cost = 0;
+    newLog.status = 'Active';
+  }, 800);
 };
 
-const closeLog = (log) => {
-  log.status = 'Closed';
-  const targetVehicle = vehicles.value.find(v => v.regNo === log.vehicle);
-  if (targetVehicle) {
-    targetVehicle.status = 'Available';
-  }
+const closeLog = async (log) => {
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
+
+  setTimeout(() => {
+    log.status = 'Closed';
+    const targetVehicle = vehicles.value.find(v => v.regNo === log.vehicle);
+    if (targetVehicle) {
+      targetVehicle.status = 'Available';
+    }
+    showToast(`Maintenance log #${log.id} marked as closed. Vehicle returns to Available status.`, 'success');
+    isSubmitting.value = false;
+  }, 500);
 };
 </script>
 
@@ -274,5 +370,76 @@ const closeLog = (log) => {
   color: var(--text-secondary);
   padding: 3rem;
   text-align: center;
+}
+
+/* Mobile Accordions */
+.mobile-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-accordion-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--border-radius-md);
+  transition: border-color 0.2s ease;
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+}
+
+.vital-col {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.chevron {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.mobile-accordion-card.expanded .chevron {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  background-color: rgba(255, 255, 255, 0.01);
+  border-top: 1px solid var(--border-color);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.meta-row .lbl {
+  color: var(--text-secondary);
+}
+
+.meta-row .val {
+  color: #fff;
+  font-weight: 600;
+}
+
+.text-white {
+  color: #fff;
+}
+
+.action-row {
+  margin-top: 0.5rem;
+  justify-content: flex-end;
 }
 </style>
