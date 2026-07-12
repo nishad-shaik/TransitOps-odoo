@@ -9,12 +9,12 @@
         </div>
       </div>
 
-      <!-- Actionable Alert Anomaly Banner -->
+      <!-- Actionable Alert Anomaly Banner (Dynamic filtration) -->
       <div class="anomaly-banner" v-if="flaggedDrivers.length > 0">
         <div class="banner-header">
-          <span class="alert-pulse">🔔</span>
-          <h3>Compliance Actionable Alerts</h3>
-          <span class="anomaly-count">{{ flaggedDrivers.length }} Flagged Drivers</span>
+          <span class="alert-pulse">🚨</span>
+          <h3>Actionable Alert Anomaly Banner</h3>
+          <span class="anomaly-count">{{ flaggedDrivers.length }} Flags Detected</span>
         </div>
         <div class="anomaly-list">
           <div class="anomaly-card" v-for="driver in flaggedDrivers" :key="driver.licenseNo">
@@ -24,9 +24,9 @@
             </div>
             <div class="card-actions">
               <span class="badge" :class="trafficLightBadgeClass(driver.severity)">
-                {{ driver.severity }}
+                {{ driver.severity === 'Red' ? 'Expired/Disabled' : 'Expiring Soon/Low Score' }}
               </span>
-              <button @click="resolveDriver(driver)" class="btn-sm btn-accent">Flag Resolved</button>
+              <button @click="resolveDriver(driver)" class="btn-sm btn-accent">Mute Flag</button>
             </div>
           </div>
         </div>
@@ -34,35 +34,40 @@
 
       <!-- Safety KPIs -->
       <div class="kpi-grid">
-        <div class="kpi-card">
+        <div class="kpi-card" @click="handleSafetyKpiClick('All')">
           <div class="kpi-header">
-            <span class="kpi-icon">👤</span>
-            <span class="kpi-label">Compliant Drivers</span>
+            <span class="kpi-icon">👥</span>
+            <span class="kpi-label">Total Drivers</span>
           </div>
           <div class="kpi-body">
-            <span class="kpi-value text-success">14</span>
-            <span class="kpi-subtext">Active &amp; valid licenses</span>
+            <span class="kpi-value">5</span>
+            <span class="kpi-subtext">Click to view all registry logs</span>
           </div>
+          <div class="kpi-border"></div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-icon">⚠️</span>
-            <span class="kpi-label">Flagged Licenses</span>
-          </div>
-          <div class="kpi-body">
-            <span class="kpi-value text-warning">2</span>
-            <span class="kpi-subtext">Expiring within 30 days</span>
-          </div>
-        </div>
-        <div class="kpi-card">
+        
+        <div class="kpi-card" @click="handleSafetyKpiClick('Red')">
           <div class="kpi-header">
             <span class="kpi-icon">❌</span>
-            <span class="kpi-label">Suspended Drivers</span>
+            <span class="kpi-label">Expired/Suspended</span>
           </div>
           <div class="kpi-body">
             <span class="kpi-value text-danger">2</span>
-            <span class="kpi-subtext">Requires retraining</span>
+            <span class="kpi-subtext">Requires immediate intervention</span>
           </div>
+          <div class="kpi-border-red"></div>
+        </div>
+
+        <div class="kpi-card" @click="handleSafetyKpiClick('Orange')">
+          <div class="kpi-header">
+            <span class="kpi-icon">⚠️</span>
+            <span class="kpi-label">Expiring Soon/Risk</span>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value text-warning">2</span>
+            <span class="kpi-subtext">Safety score &lt; 70 or expiring license</span>
+          </div>
+          <div class="kpi-border-orange"></div>
         </div>
       </div>
 
@@ -71,9 +76,9 @@
         <div class="card-header-logs">
           <div>
             <h3>Audit Log Archive (Virtualized View)</h3>
-            <p class="card-subtitle font-bold">Instantly scrolling through 2,000 audit records with zero lag</p>
+            <p class="card-subtitle font-bold text-secondary">Instantly scrolling through 2,000 audit records with zero latency</p>
           </div>
-          <span class="logs-stats">Total Logs: {{ historicalLogs.length }} | Rendered: {{ visibleLogs.length }}</span>
+          <span class="logs-stats">Logs: {{ filteredHistoricalLogs.length }} | Rendered: {{ visibleLogs.length }}</span>
         </div>
 
         <!-- Virtual Scroll Viewport -->
@@ -169,7 +174,7 @@
               <!-- Step 1: Draft -> Dispatch -->
               <div v-if="activeTrip.status === 'Draft'" class="action-block">
                 <p>Verify cargo loading limits and click to declare departure.</p>
-                <button @click="startTrip" class="btn-primary">
+                <button @click="startTrip" class="btn-primary" :disabled="isSubmitting">
                   🚀 Start Departure
                 </button>
               </div>
@@ -187,7 +192,7 @@
                     <input type="number" v-model.number="completionData.fuelCost" required />
                   </div>
                 </div>
-                <button @click="finishTrip" class="btn-primary" :disabled="!completionData.actualDistance || !completionData.fuelCost">
+                <button @click="finishTrip" class="btn-primary" :disabled="!completionData.actualDistance || !completionData.fuelCost || isSubmitting">
                   ✅ Complete Trip
                 </button>
               </div>
@@ -260,9 +265,14 @@
         </div>
       </div>
 
-      <!-- KPI Cards Grid -->
+      <!-- KPI Cards Grid with Interactive Action Straps -->
       <div class="kpi-grid">
-        <div class="kpi-card" v-for="kpi in kpis" :key="kpi.title">
+        <div 
+          class="kpi-card cursor-pointer" 
+          v-for="kpi in kpis" 
+          :key="kpi.title"
+          @click="handleKpiClick(kpi.title)"
+        >
           <div class="kpi-header">
             <span class="kpi-icon">{{ kpi.icon }}</span>
             <span class="kpi-label">{{ kpi.title }}</span>
@@ -277,12 +287,15 @@
 
       <!-- Main Content Layout Grid -->
       <div class="content-row">
-        <!-- Recent Trips Table -->
+        <!-- Recent Trips Table with KPI filtrations -->
         <div class="card recent-trips">
           <div class="card-header">
             <div>
               <h3>Active &amp; Recent Dispatches</h3>
-              <p class="card-subtitle">Real-time status of dispatch operations</p>
+              <p class="card-subtitle" v-if="activeKpiFilter !== 'All'">
+                Filtering for: <span class="badge badge-info">{{ activeKpiFilter }}</span>
+              </p>
+              <p class="card-subtitle" v-else>Real-time status of dispatch operations</p>
             </div>
             <router-link to="/trips" class="link-more">Manage Trips &rarr;</router-link>
           </div>
@@ -297,7 +310,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="trip in recentTrips" :key="trip.id">
+              <tr v-for="trip in filteredRecentTrips" :key="trip.id">
                 <td class="font-mono">#{{ trip.id }}</td>
                 <td>{{ trip.vehicle || 'Awaiting vehicle' }}</td>
                 <td>{{ trip.driver || 'Awaiting driver' }}</td>
@@ -307,6 +320,9 @@
                     {{ trip.status }}
                   </span>
                 </td>
+              </tr>
+              <tr v-if="filteredRecentTrips.length === 0">
+                <td colspan="5" class="text-center empty-row">No records match the active filter constraints.</td>
               </tr>
             </tbody>
           </table>
@@ -344,6 +360,7 @@ import { useToast } from '../composables/useToast';
 
 const { showToast } = useToast();
 const userRole = ref('Fleet Manager');
+const isSubmitting = ref(false);
 
 onMounted(() => {
   const user = JSON.parse(localStorage.getItem('transitops_user') || '{}');
@@ -351,16 +368,58 @@ onMounted(() => {
   generateHistoricalLogs();
 });
 
-// SAFETY OFFICER: Flags & Anomalies list
-const flaggedDrivers = ref([
-  { name: 'Jack Torrance', licenseNo: 'DL-66611', issue: 'Safety score critically low (45/100)', severity: 'Red' },
-  { name: 'Bruce Wayne', licenseNo: 'DL-00707', issue: 'License expires within 30 days (expiring 2026-02-15)', severity: 'Orange' },
-  { name: 'Peter Parker', licenseNo: 'DL-12290', issue: 'Over-speed event logged', severity: 'Orange' }
+// SAFETY OFFICER: Dynamic Driver compliance alerts banner
+const driversPool = ref([
+  { name: 'Jack Torrance', licenseNo: 'DL-66611', safetyScore: 45, licenseExpiry: '2026-01-15', status: 'Suspended' },
+  { name: 'Bruce Wayne', licenseNo: 'DL-00707', safetyScore: 88, licenseExpiry: '2026-08-01', status: 'Active' }, // Expiring soon (within 30 days)
+  { name: 'Peter Parker', licenseNo: 'DL-12290', safetyScore: 68, licenseExpiry: '2027-04-10', status: 'Active' }, // Safety score < 70
+  { name: 'Alex Johnson', licenseNo: 'DL-55291', safetyScore: 92, licenseExpiry: '2026-12-15', status: 'Active' },
+  { name: 'Sarah Connor', licenseNo: 'DL-44011', safetyScore: 98, licenseExpiry: '2026-05-10', status: 'Active' } // Expired
 ]);
 
+const flaggedDrivers = computed(() => {
+  const today = new Date('2026-07-12');
+  const thirtyDaysLater = new Date('2026-08-11');
+  
+  return driversPool.value.map(driver => {
+    const expiry = new Date(driver.licenseExpiry);
+    const isExpired = expiry < today;
+    const isExpiringSoon = expiry >= today && expiry <= thirtyDaysLater;
+    const isLowScore = driver.safetyScore < 70;
+    const isSuspended = driver.status === 'Suspended';
+    
+    let issue = '';
+    let severity = 'Green';
+    
+    if (isExpired || isSuspended) {
+      severity = 'Red';
+      issue = isSuspended ? 'Driver credentials Suspended' : `License Expired (${driver.licenseExpiry})`;
+    } else if (isExpiringSoon || isLowScore) {
+      severity = 'Orange';
+      issue = isLowScore ? `Safety score low (${driver.safetyScore}/100)` : `License Expiring Soon (${driver.licenseExpiry})`;
+    }
+    
+    return {
+      ...driver,
+      issue,
+      severity
+    };
+  }).filter(d => d.severity !== 'Green');
+});
+
 const resolveDriver = (driver) => {
-  flaggedDrivers.value = flaggedDrivers.value.filter(d => d.licenseNo !== driver.licenseNo);
-  showToast(`Compliance issue flagged for ${driver.name} marked as resolved!`, 'success');
+  driversPool.value = driversPool.value.map(d => {
+    if (d.licenseNo === driver.licenseNo) {
+      return {
+        ...d,
+        status: 'Active',
+        safetyScore: 90,
+        licenseExpiry: '2028-12-15' // Mute flag by renewing credentials
+      };
+    }
+    return d;
+  });
+  showToast(`Compliance flags for ${driver.name} marked as resolved!`, 'success');
 };
 
 const trafficLightBadgeClass = (severity) => {
@@ -369,24 +428,29 @@ const trafficLightBadgeClass = (severity) => {
   return 'badge-success';
 };
 
-// SAFETY OFFICER: Virtual Scroll historical compliance audit logs
+// SAFETY OFFICER: Virtual scroll driver audit logs
 const historicalLogs = ref([]);
 const scrollTop = ref(0);
-const rowHeight = 55; // pixels per row
-const viewportHeight = 350; // height of viewport container
+const rowHeight = 55; 
+const viewportHeight = 350;
+const safetyFilter = ref('All');
+
+const handleSafetyKpiClick = (filter) => {
+  safetyFilter.value = filter;
+  showToast(`Filtering audit logs: ${filter}`, 'info');
+};
 
 const generateHistoricalLogs = () => {
-  const driversPool = ['Sarah Connor', 'Bruce Wayne', 'Alex Johnson', 'Peter Parker', 'Jack Torrance', 'Diana Prince', 'Clark Kent'];
+  const names = ['Sarah Connor', 'Bruce Wayne', 'Alex Johnson', 'Peter Parker', 'Jack Torrance', 'Diana Prince', 'Clark Kent'];
   const events = ['Speeding Alert', 'License Audit Completed', 'Seatbelt Unbuckled Check', 'Fatigue Warning Sensor', 'Route Deviation Checked', 'Brake G-Force Alert'];
-  const complianceStatus = ['Pass', 'Warn', 'Fail'];
 
   const logs = [];
   for (let i = 1; i <= 2000; i++) {
-    const score = Math.floor(Math.random() * 45) + 55; // 55 to 100
+    const score = Math.floor(Math.random() * 45) + 55;
     const compliance = score >= 90 ? 'Pass' : (score >= 70 ? 'Warn' : 'Fail');
     logs.push({
       id: 5000 + i,
-      driver: driversPool[i % driversPool.length],
+      driver: names[i % names.length],
       event: events[i % events.length],
       score: score,
       compliance: compliance
@@ -395,13 +459,21 @@ const generateHistoricalLogs = () => {
   historicalLogs.value = logs;
 };
 
+const filteredHistoricalLogs = computed(() => {
+  if (safetyFilter.value === 'All') return historicalLogs.value;
+  return historicalLogs.value.filter(log => {
+    if (safetyFilter.value === 'Red') return log.compliance === 'Fail';
+    if (safetyFilter.value === 'Orange') return log.compliance === 'Warn';
+    return log.compliance === 'Pass';
+  });
+});
+
 const handleScroll = (e) => {
   scrollTop.value = e.target.scrollTop;
 };
 
-// List Virtualization Computed Values
 const totalListHeight = computed(() => {
-  return historicalLogs.value.length * rowHeight;
+  return filteredHistoricalLogs.value.length * rowHeight;
 });
 
 const visibleCount = computed(() => {
@@ -417,7 +489,7 @@ const endIndex = computed(() => {
 });
 
 const visibleLogs = computed(() => {
-  return historicalLogs.value.slice(startIndex.value, endIndex.value);
+  return filteredHistoricalLogs.value.slice(startIndex.value, endIndex.value);
 });
 
 const offsetY = computed(() => {
@@ -430,7 +502,13 @@ const complianceBadgeClass = (status) => {
   return 'badge-danger';
 };
 
-// Stepper workflow tracking for Driver
+const getSafetyClass = (score) => {
+  if (score >= 90) return 'excellent';
+  if (score >= 70) return 'good';
+  return 'risk';
+};
+
+// DRIVER steppers workflow
 const activeTrip = ref({
   id: 1046,
   source: 'Retail Hub A',
@@ -458,47 +536,84 @@ const driverTrips = ref([
 ]);
 
 const startTrip = () => {
-  activeTrip.value.status = 'Dispatched';
-  showToast('Departure declared! Drive safely.', 'success');
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
+  
+  setTimeout(() => {
+    activeTrip.value.status = 'Dispatched';
+    showToast('Departure declared! Drive safely.', 'success');
+    isSubmitting.value = false;
+  }, 500);
 };
 
 const finishTrip = () => {
-  driverTrips.value.unshift({
-    id: activeTrip.value.id,
-    source: activeTrip.value.source,
-    destination: activeTrip.value.destination,
-    cargoWeight: activeTrip.value.cargoWeight,
-    plannedDistance: completionData.actualDistance,
-    status: 'Completed'
-  });
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
 
-  activeTrip.value = null;
-  showToast('Trip dispatches completed successfully and logged!', 'success');
+  setTimeout(() => {
+    driverTrips.value.unshift({
+      id: activeTrip.value.id,
+      source: activeTrip.value.source,
+      destination: activeTrip.value.destination,
+      cargoWeight: activeTrip.value.cargoWeight,
+      plannedDistance: completionData.actualDistance,
+      status: 'Completed'
+    });
+
+    activeTrip.value = null;
+    showToast('Trip dispatches completed successfully and logged!', 'success');
+    isSubmitting.value = false;
+  }, 500);
 };
 
-// MANAGER VIEWS STATS
+// MANAGER VIEWS & KPI ACTIONS STRAP
 const filters = reactive({
   type: 'All',
   status: 'All'
 });
 
+const activeKpiFilter = ref('All');
+
 const kpis = ref([
-  { title: 'Active Vehicles', value: '18', subtext: 'Out of 24 total', icon: '🚚' },
-  { title: 'Available Vehicles', value: '12', subtext: 'Ready for dispatch', icon: '✅' },
-  { title: 'Vehicles in Maintenance', value: '3', subtext: 'Currently in shop', icon: '🔧' },
-  { title: 'Active Trips', value: '8', subtext: 'On road', icon: '🗺️' },
-  { title: 'Pending Trips', value: '2', subtext: 'Awaiting dispatch', icon: '⏳' },
-  { title: 'Drivers On Duty', value: '15', subtext: 'Out of 20 total', icon: '👤' },
-  { title: 'Fleet Utilization', value: '75%', subtext: 'Target is 85%', icon: '📈' }
+  { title: 'Active Trips', value: '8', subtext: 'On road. Click to filter.', icon: '🗺️' },
+  { title: 'Pending Trips', value: '2', subtext: 'Awaiting dispatch. Click to filter.', icon: '⏳' },
+  { title: 'Fleet Utilization', value: '75%', subtext: 'Click to reset filter', icon: '📈' }
 ]);
 
+const handleKpiClick = (title) => {
+  if (title === 'Active Trips') {
+    activeKpiFilter.value = 'Dispatched';
+    showToast('KPI Filter Applied: Showing Dispatched Trips', 'info');
+  } else if (title === 'Pending Trips') {
+    activeKpiFilter.value = 'Draft';
+    showToast('KPI Filter Applied: Showing Draft Trips', 'info');
+  } else {
+    activeKpiFilter.value = 'All';
+    showToast('KPI Filter Reset: Showing all logs', 'info');
+  }
+};
+
 const recentTrips = ref([
-  { id: 1045, vehicle: 'VAN-05', driver: 'Alex Johnson', cargoWeight: 450, status: 'Dispatched' },
-  { id: 1044, vehicle: 'TRK-02', driver: 'Sarah Connor', cargoWeight: 2200, status: 'Completed' },
-  { id: 1043, vehicle: 'SDN-01', driver: 'Bruce Wayne', cargoWeight: 350, status: 'Completed' },
-  { id: 1042, vehicle: null, driver: null, cargoWeight: 800, status: 'Draft' },
-  { id: 1041, vehicle: 'TRK-04', driver: 'Clark Kent', cargoWeight: 1800, status: 'Cancelled' }
+  { id: 1045, vehicle: 'VAN-05', driver: 'Alex Johnson', cargoWeight: 450, status: 'Dispatched', type: 'Van' },
+  { id: 1044, vehicle: 'TRK-02', driver: 'Sarah Connor', cargoWeight: 2200, status: 'Completed', type: 'Truck' },
+  { id: 1043, vehicle: 'SDN-01', driver: 'Bruce Wayne', cargoWeight: 350, status: 'Completed', type: 'Sedan' },
+  { id: 1042, vehicle: null, driver: null, cargoWeight: 800, status: 'Draft', type: 'Van' },
+  { id: 1041, vehicle: 'TRK-04', driver: 'Clark Kent', cargoWeight: 1800, status: 'Cancelled', type: 'Truck' }
 ]);
+
+const filteredRecentTrips = computed(() => {
+  return recentTrips.value.filter(trip => {
+    // KPI action filter matches
+    if (activeKpiFilter.value !== 'All') {
+      return trip.status === activeKpiFilter.value;
+    }
+    
+    // Fallback standard dropdown select filters
+    const matchesType = filters.type === 'All' || trip.type === filters.type;
+    const matchesStatus = filters.status === 'All' || trip.status === filters.status;
+    return matchesType && matchesStatus;
+  });
+});
 
 const badgeClass = (status) => {
   if (status === 'Dispatched') return 'badge-info';
@@ -551,7 +666,7 @@ const badgeClass = (status) => {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.25rem;
 }
 
@@ -573,7 +688,9 @@ const badgeClass = (status) => {
   border-color: var(--border-hover);
 }
 
-.kpi-card:hover .kpi-border {
+.kpi-card:hover .kpi-border,
+.kpi-card:hover .kpi-border-red,
+.kpi-card:hover .kpi-border-orange {
   opacity: 1;
 }
 
@@ -621,6 +738,28 @@ const badgeClass = (status) => {
   right: 0;
   height: 3px;
   background: linear-gradient(90deg, var(--primary) 0%, #7c3aed 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.kpi-border-red {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--danger);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.kpi-border-orange {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--warning);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
