@@ -75,15 +75,38 @@ const router = createRouter({
   routes
 });
 
+import { useToast } from '../composables/useToast';
+
 // Navigation guard
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('transitops_token');
+  const userStr = localStorage.getItem('transitops_user');
+  const { showToast } = useToast();
+  
+  let user = null;
+  if (userStr) {
+    try {
+      user = JSON.parse(userStr);
+    } catch (e) {
+      user = null;
+    }
+  }
+
   const requiresAuth = to.meta.requiresAuth ?? true;
 
   if (requiresAuth && !token) {
     next('/login');
   } else if (to.path === '/login' && token) {
     next('/dashboard');
+  } else if (token && user && user.role === 'Driver') {
+    // Driver Role access control: Can only access Dashboard, Trips, and Login/Logout
+    const allowedPaths = ['/dashboard', '/trips', '/login'];
+    if (!allowedPaths.includes(to.path)) {
+      showToast('Access Denied: Drivers only have access to Dashboard & Trips.', 'warning');
+      next('/dashboard');
+    } else {
+      next();
+    }
   } else {
     next();
   }

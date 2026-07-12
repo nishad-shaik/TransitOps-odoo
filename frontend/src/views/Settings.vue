@@ -99,7 +99,8 @@ const rbacMatrix = ref([
   { role: 'Fleet Manager', fleet: 'Full Access', drivers: 'Full Access', trips: 'No Access', expenses: 'No Access', analytics: 'Read-Only' },
   { role: 'Dispatcher', fleet: 'Read-Only', drivers: 'No Access', trips: 'Full Access', expenses: 'No Access', analytics: 'No Access' },
   { role: 'Safety Officer', fleet: 'No Access', drivers: 'Full Access', trips: 'Read-Only', expenses: 'No Access', analytics: 'No Access' },
-  { role: 'Financial Analyst', fleet: 'Read-Only', drivers: 'No Access', trips: 'No Access', expenses: 'Full Access', analytics: 'Full Access' }
+  { role: 'Financial Analyst', fleet: 'Read-Only', drivers: 'No Access', trips: 'No Access', expenses: 'Full Access', analytics: 'Full Access' },
+  { role: 'Driver', fleet: 'No Access', drivers: 'No Access', trips: 'Read-Only', expenses: 'No Access', analytics: 'No Access' }
 ]);
 
 const getPermClass = (perm) => {
