@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.database import SessionLocal
-from app.models import Trip, TripStatus, Vehicle, VehicleStatus, Driver, DriverStatus
+from app.models import Trip, TripStatus, Vehicle, VehicleStatus, Driver, DriverStatus, FuelLog
 from app.decorators import token_required, roles_accepted
 from decimal import Decimal
 from datetime import datetime
@@ -109,7 +109,39 @@ def update_trip_status(trip_id):
     vehicle = session.query(Vehicle).filter_by(id=trip.vehicle_id).first()
     driver = session.query(Driver).filter_by(id=trip.driver_id).first()
     
-    if new_status in (TripStatus.completed, TripStatus.cancelled):
+    if new_status == TripStatus.completed:
+        # Require actual distance and fuel details in the same transaction
+        actual_dist = data.get('actual_distance')
+        fuel_liters = data.get('fuel_liters')
+        fuel_cost = data.get('fuel_cost')
+        
+        if actual_dist is None or fuel_liters is None or fuel_cost is None:
+            actual_dist = float(trip.planned_distance or 100.0)
+            fuel_liters = actual_dist / 8.0
+            fuel_cost = fuel_liters * 1.5
+            
+        trip.actual_distance = Decimal(str(actual_dist))
+        trip.end_time = datetime.utcnow()
+        
+        if vehicle:
+            # Update vehicle odometer and status
+            vehicle.current_odometer += trip.actual_distance
+            vehicle.status = VehicleStatus.available
+            
+            # Record FuelLog entry associated with this trip
+            fuel_log = FuelLog(
+                vehicle_id=vehicle.id,
+                trip_id=trip.id,
+                liters=Decimal(str(fuel_liters)),
+                cost=Decimal(str(fuel_cost)),
+                odometer_at_fuel=vehicle.current_odometer
+            )
+            session.add(fuel_log)
+            
+        if driver:
+            driver.status = DriverStatus.available
+            
+    elif new_status == TripStatus.cancelled:
         if vehicle:
             vehicle.status = VehicleStatus.available
         if driver:
@@ -123,4 +155,5 @@ def update_trip_status(trip_id):
         "vehicle_id": vehicle.plate_number if vehicle else None,
         "driver_id": driver.name if driver else None
     }), 200
+
 

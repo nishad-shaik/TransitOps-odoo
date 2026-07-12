@@ -456,7 +456,16 @@ const dispatchTrip = async () => {
 
 const completeTrip = async (trip) => {
   try {
-    await client.patch(`/trips/${trip.id}`, { status: 'Completed' });
+    const actualDistance = prompt("Enter actual distance travelled (km):", trip.planned_distance) || trip.planned_distance;
+    const fuelLiters = prompt("Enter fuel consumed (Liters):", Math.round(actualDistance / 8)) || Math.round(actualDistance / 8);
+    const fuelCost = prompt("Enter fuel cost ($):", Math.round(fuelLiters * 1.5)) || Math.round(fuelLiters * 1.5);
+
+    await client.patch(`/trips/${trip.id}`, { 
+      status: 'Completed',
+      actual_distance: Number(actualDistance),
+      fuel_liters: Number(fuelLiters),
+      fuel_cost: Number(fuelCost)
+    });
     showToast(`Trip #${trip.id} completed successfully!`, 'success');
     await fetchTrips();
     await fetchVehicles();
