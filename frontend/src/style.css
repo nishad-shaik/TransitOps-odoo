@@ -109,6 +109,16 @@ p {
   transition: margin-left 0.3s ease;
 }
 
+/* Bottom Navigation / Mobile layout overrides */
+.mobile-nav-active .main-wrapper {
+  margin-left: 0 !important;
+}
+
+.mobile-nav-active .topbar {
+  left: 0 !important;
+}
+
+
 .main-content {
   padding: 2.5rem;
   margin-top: var(--topbar-height);
