@@ -3,13 +3,13 @@ import os
 import random
 import sys
 import uuid
+import hashlib  # Changed to native hashlib to bypass the broken passlib/bcrypt combination
 from datetime import date, datetime, timedelta, timezone
 
-from passlib.hash import bcrypt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from models import (
+from app.models import (
     Base,
     Driver,
     DriverStatus,
@@ -26,7 +26,12 @@ from models import (
     VehicleStatus,
 )
 
-DEFAULT_DB_URL = "mysql+pymysql://root:password@localhost:3306/transitops"
+DEFAULT_DB_URL = "sqlite:///transitops.db"
+
+
+def hash_password(password: str) -> str:
+    """Safe native fallback for seeding passwords without depending on broken passlib mixins."""
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 
 def get_engine():
@@ -90,20 +95,18 @@ def seed_data(engine):
 
         # Users
         users = [
-            User(email="admin@transitops.dev", password_hash=bcrypt.hash("password123"), role=UserRole.admin),
-            User(email="dispatcher@transitops.dev", password_hash=bcrypt.hash("password123"), role=UserRole.dispatcher),
-            User(email="mechanic@transitops.dev", password_hash=bcrypt.hash("password123"), role=UserRole.mechanic),
+            User(email="admin@transitops.dev", password_hash=hash_password("password123"), role=UserRole.admin),
+            User(email="dispatcher@transitops.dev", password_hash=hash_password("password123"), role=UserRole.dispatcher),
+            User(email="mechanic@transitops.dev", password_hash=hash_password("password123"), role=UserRole.mechanic),
         ]
         driver_logins = [
-            User(email=f"driver{i}@transitops.dev", password_hash=bcrypt.hash("password123"), role=UserRole.driver)
+            User(email=f"driver{i}@transitops.dev", password_hash=hash_password("password123"), role=UserRole.driver)
             for i in range(1, 6)
         ]
         session.add_all(users + driver_logins)
         session.flush()
 
         #  Vehicles 
-        # Fixed status plan so the current dashboard state is predictable:
-        # 10 Available, 3 On Trip, 3 Maintenance, 2 Retired = 18 vehicles.
         status_plan = (
             [VehicleStatus.available] * 10
             + [VehicleStatus.on_trip] * 3
@@ -309,10 +312,6 @@ def seed_data(engine):
             f"{len(maintenance_records)} maintenance records, {len(fuel_logs)} fuel logs, "
             f"{len(expenses)} expenses."
         )
-        print("Edge cases included: 2 Retired vehicles, 3 In-Maintenance vehicles (Open "
-              "maintenance record each), 2 Suspended drivers, 1 Available driver with an "
-              "EXPIRED license (name printed above under used_names — check the drivers "
-              "table for license_expiry_date < today).")
 
 
 def main():
