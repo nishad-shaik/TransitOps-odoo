@@ -1,6 +1,6 @@
 <template>
   <div class="app-layout" :class="{ 'auth-view': isAuthView, 'mobile-nav-active': isMobileLayout }">
-    <!-- Render desktop sidebar only if not on Login page and not on Mobile Layout roles -->
+    <!-- Render desktop sidebar only if not on Login page and not on Mobile Layout roles/widths -->
     <Sidebar v-if="!isAuthView && !isMobileLayout" />
     
     <div class="main-wrapper">
@@ -12,7 +12,7 @@
       </main>
     </div>
 
-    <!-- Render bottom touch navigation only for Dispatchers and Drivers when logged in -->
+    <!-- Render bottom touch navigation for mobile widths or Dispatchers/Drivers -->
     <BottomNav v-if="!isAuthView && isMobileLayout" />
     
     <!-- Global Toasts -->
@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import Sidebar from './components/layout/Sidebar.vue';
 import Topbar from './components/layout/Topbar.vue';
@@ -30,21 +30,35 @@ import ToastNotification from './components/ui/ToastNotification.vue';
 
 const route = useRoute();
 const userRole = ref('');
+const isMobileWidth = ref(false);
 
-// Dynamically check user role on navigation to adapt the layout
+const handleResize = () => {
+  isMobileWidth.value = window.innerWidth < 768;
+};
+
+// Dynamically check user role and size on navigation to adapt the layout
 watch(() => route.path, () => {
   const user = JSON.parse(localStorage.getItem('transitops_user') || '{}');
   userRole.value = user.role || '';
 }, { immediate: true });
+
+onMounted(() => {
+  handleResize();
+  window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+});
 
 // Check if current route is the login view
 const isAuthView = computed(() => {
   return route.name === 'Login';
 });
 
-// Check if the current user should get the mobile touch-optimized bottom navigation
+// Check if the current user should get the mobile touch-optimized bottom navigation (width < 768px or specific roles)
 const isMobileLayout = computed(() => {
-  return ['Dispatcher', 'Driver'].includes(userRole.value);
+  return isMobileWidth.value || ['Dispatcher', 'Driver'].includes(userRole.value);
 });
 </script>
 

@@ -1,7 +1,7 @@
 <template>
   <nav class="bottom-nav">
     <router-link
-      v-for="link in allowedLinks"
+      v-for="link in allLinks"
       :key="link.path"
       :to="link.path"
       class="nav-item"
@@ -14,23 +14,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-
-const userRole = ref('Driver');
-
-onMounted(() => {
-  const user = JSON.parse(localStorage.getItem('transitops_user') || '{}');
-  if (user.role) userRole.value = user.role;
-});
-
 const allLinks = [
-  { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['Dispatcher', 'Driver'] },
-  { path: '/trips', label: 'Trips', icon: '🗺️', roles: ['Dispatcher', 'Driver'] }
+  { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+  { path: '/trips', label: 'Trips', icon: '🗺️' },
+  { path: '/maintenance', label: 'Maintenance', icon: '🔧' },
+  { path: '/fuel-expenses', label: 'Fuel & Exp', icon: '💳' }
 ];
-
-const allowedLinks = computed(() => {
-  return allLinks.filter(link => link.roles.includes(userRole.value));
-});
 </script>
 
 <style scoped>
@@ -58,15 +47,15 @@ const allowedLinks = computed(() => {
   text-decoration: none;
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.5rem 1.5rem; /* Touch targets optimized */
-  min-height: 48px; /* Ensures minimum hit target size */
+  padding: 0.5rem 1rem;
+  min-height: 48px; /* Thumb-friendly tap zones (minimum 48px height) */
   transition: all 0.2s ease;
   flex: 1;
 }
 
 .nav-icon {
-  font-size: 1.3rem;
-  margin-bottom: 0.2rem;
+  font-size: 1.25rem;
+  margin-bottom: 0.15rem;
 }
 
 .nav-item:hover {
